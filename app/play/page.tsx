@@ -26,6 +26,7 @@ class JumperScene extends Phaser.Scene {
   private playerCountText?: Phaser.GameObjects.Text;
   private lastPositionUpdate: number = 0;
   private collectSound?: Phaser.Sound.BaseSound;
+  private jumpTouchZone?: Phaser.GameObjects.Zone;
 
   init(data: { charUrl?: string; roomId?: string; supabase?: any }) {
     this.charUrl = data.charUrl;
@@ -38,6 +39,16 @@ class JumperScene extends Phaser.Scene {
     this.powerUps = this.add.group();
   }
 
+  preload() {
+    // Preload game assets (must be in preload, not create)
+    this.load.image('asset-coin', '/game-assets/items/taleweave-coin.svg');
+    this.load.image('asset-golden-coin', '/game-assets/items/taleweave-goldencoin.svg');
+    this.load.image('asset-speed', '/game-assets/items/speed-boost.svg');
+    this.load.image('asset-double-jump', '/game-assets/items/double-jump.svg');
+    this.load.image('asset-shield', '/game-assets/items/shield.svg');
+    this.load.audio('collect', '/game-assets/sfx/collect.mp3');
+  }
+
   create() {
     // Set world bounds for camera scrolling
     this.physics.world.setBounds(0, 0, 2000, 2000);
@@ -46,45 +57,42 @@ class JumperScene extends Phaser.Scene {
     const width = this.scale.width;
     const height = this.scale.height;
 
-    // Load assets (SVGs in public/game-assets)
-    this.load.image('asset-coin', '/game-assets/items/taleweave-coin.svg');
-    this.load.image('asset-golden-coin', '/game-assets/items/taleweave-goldencoin.svg');
-    this.load.image('asset-speed', '/game-assets/items/speed-boost.svg');
-    this.load.image('asset-double-jump', '/game-assets/items/double-jump.svg');
-    this.load.image('asset-shield', '/game-assets/items/shield.svg');
+    // Generate particle texture if not already loaded
+    if (!this.textures.exists('spark')) {
+      const gfx = this.add.graphics();
+      gfx.fillStyle(0xffffff, 1);
+      gfx.fillCircle(2, 2, 2);
+      gfx.generateTexture('spark', 4, 4);
+      gfx.destroy();
+    }
 
-    // Particle texture
-    const p = this.add.graphics();
-    p.fillStyle(0xffffff, 1);
-    p.fillCircle(2, 2, 2);
-    p.generateTexture('spark', 4, 4);
-    p.destroy();
-
-    const pm = this.add.particles('spark');
-    this.speedEmitter = pm.createEmitter({
+    // Create particle emitters with correct x, y, texture signature
+    this.speedEmitter = this.add.particles(0, 0, 'spark', {
       speed: { min: -50, max: 50 },
       lifespan: 400,
       quantity: 4,
       scale: { start: 0.6, end: 0 },
       tint: 0x4ecdc4,
-      on: false,
-    });
-    this.shieldEmitter = pm.createEmitter({
+    }) as Phaser.GameObjects.Particles.ParticleEmitter;
+    this.speedEmitter.stop();
+    
+    this.shieldEmitter = this.add.particles(0, 0, 'spark', {
       speed: 10,
       lifespan: 600,
       quantity: 3,
       scale: { start: 0.8, end: 0 },
       tint: 0x95e1d3,
-      on: false,
-    });
-    this.jumpEmitter = pm.createEmitter({
+    }) as Phaser.GameObjects.Particles.ParticleEmitter;
+    this.shieldEmitter.stop();
+    
+    this.jumpEmitter = this.add.particles(0, 0, 'spark', {
       speed: { min: -80, max: 80 },
       lifespan: 500,
       quantity: 8,
       scale: { start: 0.8, end: 0 },
       tint: 0xffe66d,
-      on: false,
-    });
+    }) as Phaser.GameObjects.Particles.ParticleEmitter;
+    this.jumpEmitter.stop();
 
     // Create ground with visual style (full world width)
     const ground = this.add.rectangle(1000, 1950, 2000, 100, 0x4ECDC4);
@@ -162,6 +170,9 @@ class JumperScene extends Phaser.Scene {
       fontFamily: 'Nunito',
     });
     this.playerCountText.setScrollFactor(0); // Fixed to camera
+    
+    // Coin SFX (if loaded)
+    this.collectSound = this.sound.get('collect') || this.sound.add('collect', { volume: 0.5 });
 
     // Load player character
     if (this.charUrl) {
@@ -176,7 +187,21 @@ class JumperScene extends Phaser.Scene {
       // Default character if none found
       this.createDefaultPlayer();
       this.setupInput();
+      this.subscribeToRoom();
     }
+
+    // Touch controls (jump on tap upper half)
+    this.jumpTouchZone = this.add.zone(0, 0, width, height / 2).setOrigin(0).setInteractive();
+    this.jumpTouchZone.on('pointerdown', () => {
+      if (!this.player) return;
+      if (this.player.body.touching.down) {
+        this.player.setVelocityY(-600);
+      } else if (this.playerBuffs.doubleJump > 0) {
+        this.player.setVelocityY(-600);
+        this.playerBuffs.doubleJump -= 1;
+        this.jumpEmitter?.explode(10, this.player.x, this.player.y);
+      }
+    });
   }
 
   createPlayer() {
@@ -308,20 +333,22 @@ class JumperScene extends Phaser.Scene {
     }
 
     // Collide with all platforms
-    this.platforms?.children.entries.forEach((platform) => {
-      this.physics.add.collider(this.player, platform as Phaser.GameObjects.Rectangle);
-    });
+    if (this.player) {
+      this.platforms?.children.entries.forEach((platform) => {
+        this.physics.add.collider(this.player!, platform as Phaser.GameObjects.Rectangle);
+      });
 
-    // Collect coins
-    this.coins?.children.entries.forEach((coin) => {
-      this.physics.add.overlap(
-        this.player,
-        coin as Phaser.GameObjects.Sprite,
-        (player, coinSprite) => {
-          this.collectCoin(coinSprite as Phaser.GameObjects.Sprite);
-        }
-      );
-    });
+      // Collect coins
+      this.coins?.children.entries.forEach((coin) => {
+        this.physics.add.overlap(
+          this.player!,
+          coin as Phaser.GameObjects.Sprite,
+          (player, coinSprite) => {
+            this.collectCoin(coinSprite as Phaser.GameObjects.Sprite);
+          }
+        );
+      });
+    }
   }
 
   setupInput() {
@@ -373,7 +400,7 @@ class JumperScene extends Phaser.Scene {
     }
 
     // Particle effect
-    const particles = this.add.particles(coin.x, coin.y, null, {
+    const particles = this.add.particles(coin.x, coin.y, 'spark', {
       speed: { min: 50, max: 100 },
       scale: { start: 0.5, end: 0 },
       tint: 0xFFE66D,
@@ -544,8 +571,9 @@ class JumperScene extends Phaser.Scene {
         let sprite = existingSprites.get(playerData.user_id);
 
         if (!sprite) {
-          // Create new sprite
-          sprite = this.physics.add.sprite(playerData.x || 100, playerData.y || 100, null);
+          // Create new sprite (use default texture key if char_url not available)
+          const textureKey = playerData.char_url || '__MISSING';
+          sprite = this.physics.add.sprite(playerData.x || 100, playerData.y || 100, textureKey);
           
           // Try to load character image if available
           if (playerData.char_url) {
@@ -775,7 +803,7 @@ export default function PlayPage() {
             physics: {
               default: 'arcade',
               arcade: {
-                gravity: { y: 1200 },
+                gravity: { x: 0, y: 1200 },
                 debug: false,
               },
             },
