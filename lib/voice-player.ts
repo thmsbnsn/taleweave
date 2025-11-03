@@ -39,7 +39,8 @@ export function playVoice(
     const sound = new Howl({
       src: [clipPath],
       rate: rate,
-      reverb: settings.reverb,
+      // Note: reverb not directly supported by Howler.js
+      // Would require Web Audio API for full reverb implementation
       onend: () => {
         console.log('Clip done');
       },
@@ -56,7 +57,8 @@ export function playVoice(
     const sound = new Howl({
       src: [voiceUrl],
       rate: rate,
-      reverb: settings.reverb,
+      // Note: reverb not directly supported by Howler.js
+      // Would require Web Audio API for full reverb implementation
       onend: () => {
         console.log('Voice done');
       },
