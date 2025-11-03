@@ -20,7 +20,7 @@
   "dependencies": {
     "@stripe/stripe-js": "^2.2.0",
     "@supabase/ssr": "^0.0.10",
-    "@supabase/supabase-js": "^2.38.4",
+    "@supabase/supabase-js": "^2.78.0",
     "@types/howler": "^2.2.12",
     "@types/react-google-recaptcha": "^2.1.9",
     "elevenlabs": "^0.8.1",
@@ -31,6 +31,7 @@
     "jszip": "^3.10.1",
     "next": "^14.0.4",
     "openai": "^4.20.1",
+    "phaser": "^3.90.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-google-recaptcha": "^3.1.0",

@@ -107,9 +107,14 @@ export default function Home() {
               How It Works
             </Link>
             {user && (
-              <Link href="/learn" className="font-nunito text-gray-700 hover:text-coral transition">
-                Academy
-              </Link>
+              <>
+                <Link href="/learn" className="font-nunito text-gray-700 hover:text-coral transition">
+                  Academy
+                </Link>
+                <Link href="/play" className="font-nunito text-gray-700 hover:text-coral transition">
+                  🎮 Games
+                </Link>
+              </>
             )}
             {!user && (
               <Link href="/pricing" className="font-nunito text-gray-700 hover:text-coral transition">
