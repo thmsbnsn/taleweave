@@ -132,49 +132,51 @@ class JumperScene extends Phaser.Scene {
     });
   }
 
-  updatePlayerPosition() {
+  async updatePlayerPosition() {
     if (!this.player || !this.roomId || !this.supabase) return;
 
-    const { data: { user } } = this.supabase.auth.getUser().then((result: any) => {
-      if (!result.data?.user) return;
+    try {
+      const { data: { user } } = await this.supabase.auth.getUser();
+      if (!user) return;
 
       // Update player position in room
-      this.supabase
+      const { data } = await this.supabase
         .from('game_rooms')
         .select('players')
         .eq('id', this.roomId)
-        .single()
-        .then(({ data }: any) => {
-          if (!data) return;
+        .single();
 
-          const players = (data.players || []) as any[];
-          const playerIndex = players.findIndex((p: any) => p.user_id === result.data.user.id);
+      if (!data) return;
 
-          const playerData = {
-            user_id: result.data.user.id,
-            x: this.player!.x,
-            y: this.player!.y,
-            vx: this.player!.body.velocity.x,
-            vy: this.player!.body.velocity.y,
-            char_url: this.charUrl || '',
-            name: result.data.user.user_metadata?.display_name || 'Player',
-          };
+      const players = (data.players || []) as any[];
+      const playerIndex = players.findIndex((p: any) => p.user_id === user.id);
 
-          if (playerIndex >= 0) {
-            players[playerIndex] = playerData;
-          } else {
-            players.push(playerData);
-          }
+      const playerData = {
+        user_id: user.id,
+        x: this.player.x,
+        y: this.player.y,
+        vx: this.player.body.velocity.x,
+        vy: this.player.body.velocity.y,
+        char_url: this.charUrl || '',
+        name: user.user_metadata?.display_name || 'Player',
+      };
 
-          this.supabase
-            .from('game_rooms')
-            .update({
-              players,
-              updated_at: new Date().toISOString(),
-            })
-            .eq('id', this.roomId);
-        });
-    });
+      if (playerIndex >= 0) {
+        players[playerIndex] = playerData;
+      } else {
+        players.push(playerData);
+      }
+
+      await this.supabase
+        .from('game_rooms')
+        .update({
+          players,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', this.roomId);
+    } catch (error) {
+      console.error('Error updating player position:', error);
+    }
   }
 
   subscribeToRoom() {
@@ -293,7 +295,7 @@ class JumperScene extends Phaser.Scene {
     }
 
     // Update position periodically (throttled)
-    if (!this.time.delayedCall || !this.time.delayedCall.active) {
+    if (!this.time.delayedCall) {
       this.time.delayedCall(100, () => {
         this.updatePlayerPosition();
       });
