@@ -97,17 +97,24 @@ export default function ParentDashboard() {
 
         setChildren(kids);
 
-        // Select first child by default
-        if (kids.length > 0 && !selectedChild) {
-          setSelectedChild(kids[0]);
-          setLocked(kids[0].is_locked || false);
+        // Select first child by default (only if no child is selected)
+        if (kids.length > 0) {
+          // Use a callback to check selectedChild without adding it to dependencies
+          setSelectedChild((current) => {
+            if (!current) {
+              setLocked(kids[0].is_locked || false);
+              return kids[0];
+            }
+            return current;
+          });
         }
       } else {
         setChildren([]);
       }
     }
     load();
-  }, [supabase]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [supabase]); // selectedChild intentionally omitted to prevent re-render loop
 
   // Load child profile and parent roles when child is selected
   useEffect(() => {
@@ -309,7 +316,7 @@ export default function ParentDashboard() {
                   className="input-field"
                   placeholder="e.g., timmy123"
                 />
-                <p className="text-sm text-gray-600 mt-1">This is what they'll use to login</p>
+                <p className="text-sm text-gray-600 mt-1">This is what they&apos;ll use to login</p>
               </div>
               <div>
                 <label className="block font-nunito mb-2">Password *</label>
@@ -331,7 +338,7 @@ export default function ParentDashboard() {
                   className="input-field"
                   placeholder="e.g., Timmy"
                 />
-                <p className="text-sm text-gray-600 mt-1">How they'll appear in the app</p>
+                <p className="text-sm text-gray-600 mt-1">How they&apos;ll appear in the app</p>
               </div>
               <button type="submit" disabled={loading} className="btn-primary w-full">
                 {loading ? 'Creating...' : 'Create Account'}
