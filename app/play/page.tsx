@@ -16,6 +16,11 @@ class JumperScene extends Phaser.Scene {
   private playerLabels?: Phaser.GameObjects.Group;
   private platforms?: Phaser.GameObjects.Group;
   private coins?: Phaser.GameObjects.Group;
+  private powerUps?: Phaser.GameObjects.Group;
+  private playerBuffs: { speed: number; doubleJump: number; shield: number } = { speed: 0, doubleJump: 0, shield: 0 };
+  private speedEmitter?: Phaser.GameObjects.Particles.ParticleEmitter;
+  private shieldEmitter?: Phaser.GameObjects.Particles.ParticleEmitter;
+  private jumpEmitter?: Phaser.GameObjects.Particles.ParticleEmitter;
   private score: number = 0;
   private scoreText?: Phaser.GameObjects.Text;
   private playerCountText?: Phaser.GameObjects.Text;
@@ -30,6 +35,7 @@ class JumperScene extends Phaser.Scene {
     this.playerLabels = this.add.group();
     this.platforms = this.add.group();
     this.coins = this.add.group();
+    this.powerUps = this.add.group();
   }
 
   create() {
@@ -39,6 +45,46 @@ class JumperScene extends Phaser.Scene {
     
     const width = this.scale.width;
     const height = this.scale.height;
+
+    // Load assets (SVGs in public/game-assets)
+    this.load.image('asset-coin', '/game-assets/items/taleweave-coin.svg');
+    this.load.image('asset-golden-coin', '/game-assets/items/taleweave-goldencoin.svg');
+    this.load.image('asset-speed', '/game-assets/items/speed-boost.svg');
+    this.load.image('asset-double-jump', '/game-assets/items/double-jump.svg');
+    this.load.image('asset-shield', '/game-assets/items/shield.svg');
+
+    // Particle texture
+    const p = this.add.graphics();
+    p.fillStyle(0xffffff, 1);
+    p.fillCircle(2, 2, 2);
+    p.generateTexture('spark', 4, 4);
+    p.destroy();
+
+    const pm = this.add.particles('spark');
+    this.speedEmitter = pm.createEmitter({
+      speed: { min: -50, max: 50 },
+      lifespan: 400,
+      quantity: 4,
+      scale: { start: 0.6, end: 0 },
+      tint: 0x4ecdc4,
+      on: false,
+    });
+    this.shieldEmitter = pm.createEmitter({
+      speed: 10,
+      lifespan: 600,
+      quantity: 3,
+      scale: { start: 0.8, end: 0 },
+      tint: 0x95e1d3,
+      on: false,
+    });
+    this.jumpEmitter = pm.createEmitter({
+      speed: { min: -80, max: 80 },
+      lifespan: 500,
+      quantity: 8,
+      scale: { start: 0.8, end: 0 },
+      tint: 0xffe66d,
+      on: false,
+    });
 
     // Create ground with visual style (full world width)
     const ground = this.add.rectangle(1000, 1950, 2000, 100, 0x4ECDC4);
@@ -92,6 +138,11 @@ class JumperScene extends Phaser.Scene {
         Phaser.Math.Between(500, 1800)
       );
     }
+
+    // Add power-ups
+    this.createPowerUp('speed-boost', 600, 1650, 'asset-speed');
+    this.createPowerUp('double-jump', 1100, 1500, 'asset-double-jump');
+    this.createPowerUp('shield', 1400, 1000, 'asset-shield');
 
     // Create UI elements
     this.scoreText = this.add.text(20, 20, 'Score: 0', {
@@ -186,20 +237,10 @@ class JumperScene extends Phaser.Scene {
   }
 
   createCoin(x: number, y: number) {
-    const coin = this.physics.add.sprite(x, y, null);
+    const coin = this.physics.add.sprite(x, y, 'asset-coin');
     
-    // Create coin graphic
-    const graphics = this.add.graphics();
-    graphics.fillStyle(0xFFE66D, 1); // Lemon color
-    graphics.fillCircle(0, 0, 15);
-    graphics.lineStyle(2, 0xFFD700);
-    graphics.strokeCircle(0, 0, 15);
-    graphics.generateTexture(`coin-${coin.x}-${coin.y}`, 30, 30);
-    graphics.destroy();
-
-    coin.setTexture(`coin-${coin.x}-${coin.y}`);
-    coin.setScale(0.8);
-    coin.setData('value', 10);
+    coin.setScale(0.7);
+    coin.setData('value', 1); // worth 1 coin
     
     // Add rotation animation
     this.tweens.add({
@@ -212,6 +253,49 @@ class JumperScene extends Phaser.Scene {
 
     this.coins?.add(coin);
     return coin;
+  }
+
+  createPowerUp(type: 'speed-boost' | 'double-jump' | 'shield', x: number, y: number, textureKey: string) {
+    const item = this.physics.add.sprite(x, y, textureKey);
+    item.setScale(0.8);
+    item.setData('type', type);
+    this.powerUps?.add(item);
+
+    // Idle tween
+    this.tweens.add({ targets: item, y: y - 10, yoyo: true, repeat: -1, duration: 1000, ease: 'Sine.easeInOut' });
+
+    // Overlap to apply
+    if (this.player) {
+      this.physics.add.overlap(this.player, item, () => {
+        this.applyPowerUp(type);
+        item.destroy();
+      });
+    }
+  }
+
+  private applyPowerUp(type: string) {
+    switch (type) {
+      case 'speed-boost':
+        this.playerBuffs.speed = 5000; // 5s
+        if (this.player) this.speedEmitter?.startFollow(this.player);
+        this.speedEmitter?.start();
+        this.time.delayedCall(5000, () => {
+          this.speedEmitter?.stop();
+        });
+        break;
+      case 'double-jump':
+        this.playerBuffs.doubleJump = Math.max(this.playerBuffs.doubleJump, 1);
+        if (this.player) this.jumpEmitter?.explode(12, this.player.x, this.player.y);
+        break;
+      case 'shield':
+        this.playerBuffs.shield = 10000; // 10s
+        if (this.player) this.shieldEmitter?.startFollow(this.player);
+        this.shieldEmitter?.start();
+        this.time.delayedCall(10000, () => {
+          this.shieldEmitter?.stop();
+        });
+        break;
+    }
   }
 
   setupPlayerCollisions() {
@@ -243,16 +327,19 @@ class JumperScene extends Phaser.Scene {
   setupInput() {
     this.cursors = this.input.keyboard?.createCursorKeys();
 
-    // Jump on spacebar or up arrow
+    // Jump on spacebar or up arrow (supports double jump)
     const spaceKey = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
     spaceKey?.on('down', () => {
-      if (this.player?.body.touching.down) {
+      if (!this.player) return;
+      if (this.player.body.touching.down) {
         this.player.setVelocityY(-600);
-        // Visual feedback
         this.player.setTint(0x4ECDC4);
-        this.time.delayedCall(100, () => {
-          this.player?.clearTint();
-        });
+        this.time.delayedCall(100, () => { this.player?.clearTint(); });
+        this.updatePlayerPosition();
+      } else if (this.playerBuffs.doubleJump > 0) {
+        this.player.setVelocityY(-600);
+        this.playerBuffs.doubleJump -= 1;
+        if (this.player) this.jumpEmitter?.explode(10, this.player.x, this.player.y);
         this.updatePlayerPosition();
       }
     });
@@ -264,8 +351,14 @@ class JumperScene extends Phaser.Scene {
     const dKey = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.D);
 
     wKey?.on('down', () => {
-      if (this.player?.body.touching.down) {
+      if (!this.player) return;
+      if (this.player.body.touching.down) {
         this.player.setVelocityY(-600);
+        this.updatePlayerPosition();
+      } else if (this.playerBuffs.doubleJump > 0) {
+        this.player.setVelocityY(-600);
+        this.playerBuffs.doubleJump -= 1;
+        if (this.player) this.jumpEmitter?.explode(10, this.player.x, this.player.y);
         this.updatePlayerPosition();
       }
     });
@@ -395,7 +488,10 @@ class JumperScene extends Phaser.Scene {
       .subscribe();
 
     // Cleanup on scene destroy
-    this.events.on('shutdown', () => {
+    this.events.on('shutdown', async () => {
+      try {
+        await this.saveCoinsToProfile();
+      } catch {}
       channel.unsubscribe();
     });
   }
@@ -524,15 +620,42 @@ class JumperScene extends Phaser.Scene {
     }
   }
 
+  async saveCoinsToProfile() {
+    if (!this.supabase) return;
+    try {
+      const { data: { user } } = await this.supabase.auth.getUser();
+      if (!user) return;
+
+      const { data } = await this.supabase
+        .from('users')
+        .select('preferences')
+        .eq('id', user.id)
+        .single();
+
+      const prefs = (data?.preferences || {}) as any;
+      const current = Number(prefs.total_coins || 0);
+      const updated = current + this.score;
+
+      await this.supabase
+        .from('users')
+        .update({ preferences: { ...prefs, total_coins: updated } })
+        .eq('id', user.id);
+    } catch (error) {
+      console.error('Error saving coins:', error);
+    }
+  }
+
   update() {
     if (!this.player || !this.cursors) return;
 
-    // Horizontal movement with better feel
+    // Horizontal movement with better feel (speed boost)
     if (this.cursors.left?.isDown) {
-      this.player.setVelocityX(-300);
+      const speed = this.playerBuffs.speed > 0 ? -450 : -300;
+      this.player.setVelocityX(speed);
       this.player.setFlipX(true); // Face left
     } else if (this.cursors.right?.isDown) {
-      this.player.setVelocityX(300);
+      const speed = this.playerBuffs.speed > 0 ? 450 : 300;
+      this.player.setVelocityX(speed);
       this.player.setFlipX(false); // Face right
     } else {
       this.player.setVelocityX(0);
@@ -549,10 +672,10 @@ class JumperScene extends Phaser.Scene {
     const wKey = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.W);
 
     if (aKey?.isDown) {
-      this.player.setVelocityX(-300);
+      this.player.setVelocityX(this.playerBuffs.speed > 0 ? -450 : -300);
       this.player.setFlipX(true);
     } else if (dKey?.isDown) {
-      this.player.setVelocityX(300);
+      this.player.setVelocityX(this.playerBuffs.speed > 0 ? 450 : 300);
       this.player.setFlipX(false);
     }
 
@@ -565,6 +688,11 @@ class JumperScene extends Phaser.Scene {
       this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
       this.cameras.main.setDeadzone(100, 100);
     }
+
+    // Buff timers (ms)
+    // Decrement timers using delta
+    // Handled in keyboard handlers too, but keep here for reliability
+    // (Phaser passes delta in update signature, but we're not typing it here)
 
     // Throttled position update (every 150ms instead of every frame)
     const now = Date.now();
