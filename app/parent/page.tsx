@@ -88,10 +88,9 @@ export default function ParentDashboard() {
       } else {
         setChildren([]);
       }
-
     }
     load();
-  }, [supabase]);
+  }, [supabase, selectedChild]);
 
   // Toggle lock
   const toggleLock = async () => {
