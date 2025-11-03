@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 
-export default function AcceptInvitePage() {
+function AcceptInviteForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get('token');
@@ -144,6 +144,21 @@ export default function AcceptInvitePage() {
         )}
       </div>
     </main>
+  );
+}
+
+export default function AcceptInvitePage() {
+  return (
+    <Suspense fallback={
+      <main className="min-h-screen bg-gradient-to-br from-mint via-white to-lemon flex items-center justify-center py-20 px-6">
+        <div className="card max-w-md w-full text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-coral mx-auto mb-4"></div>
+          <p className="font-nunito text-gray-600">Loading...</p>
+        </div>
+      </main>
+    }>
+      <AcceptInviteForm />
+    </Suspense>
   );
 }
 

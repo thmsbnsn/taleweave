@@ -1,9 +1,12 @@
 'use client';
 
+// Force dynamic rendering to prevent SSR issues with Phaser
+export const dynamic = 'force-dynamic';
+
 import { useEffect, useRef, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import Phaser from 'phaser';
 import { useRouter } from 'next/navigation';
+import * as Phaser from 'phaser';
 
 // Jumper Game Scene
 class JumperScene extends Phaser.Scene {
@@ -225,12 +228,13 @@ class JumperScene extends Phaser.Scene {
     this.player.setTint(0xFFFFFF);
 
     this.setupPlayerCollisions();
+    
+    // Center camera on player initially
+    this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
+    this.cameras.main.setDeadzone(100, 100);
   }
 
   createDefaultPlayer() {
-    const width = this.scale.width;
-    const height = this.scale.height;
-
     // Create a colorful default character with better visuals
     const graphics = this.add.graphics();
     // Body (circle)
@@ -392,7 +396,7 @@ class JumperScene extends Phaser.Scene {
   }
 
   collectCoin(coin: Phaser.GameObjects.Sprite) {
-    const value = coin.getData('value') || 10;
+    const value = coin.getData('value') || 1;
     this.score += value;
     
     if (this.scoreText) {
@@ -412,14 +416,11 @@ class JumperScene extends Phaser.Scene {
       particles.destroy();
     });
 
+    // SFX
+    this.collectSound?.play();
     // Destroy coin
     coin.destroy();
     this.updatePlayerPosition();
-    
-    // Update score in database
-    if (this.roomId && this.supabase) {
-      this.updateGameState({ score: this.score });
-    }
   }
 
   async updateGameState(stateUpdate: any) {
@@ -516,9 +517,25 @@ class JumperScene extends Phaser.Scene {
 
     // Cleanup on scene destroy
     this.events.on('shutdown', async () => {
-      try {
-        await this.saveCoinsToProfile();
-      } catch {}
+      // Save total coins to user preferences
+      if (this.supabase && this.score > 0) {
+        const { data: { user } } = await this.supabase.auth.getUser();
+        if (user) {
+          const { data: userProfile } = await this.supabase
+            .from('users')
+            .select('preferences')
+            .eq('id', user.id)
+            .single();
+          
+          const currentCoins = userProfile?.preferences?.total_coins || 0;
+          const newCoins = currentCoins + this.score;
+
+          await this.supabase
+            .from('users')
+            .update({ preferences: { ...userProfile?.preferences, total_coins: newCoins } })
+            .eq('id', user.id);
+        }
+      }
       channel.unsubscribe();
     });
   }
@@ -571,9 +588,8 @@ class JumperScene extends Phaser.Scene {
         let sprite = existingSprites.get(playerData.user_id);
 
         if (!sprite) {
-          // Create new sprite (use default texture key if char_url not available)
-          const textureKey = playerData.char_url || '__MISSING';
-          sprite = this.physics.add.sprite(playerData.x || 100, playerData.y || 100, textureKey);
+          // Create new sprite
+          sprite = this.physics.add.sprite(playerData.x || 100, playerData.y || 100, '__MISSING');
           
           // Try to load character image if available
           if (playerData.char_url) {
@@ -648,42 +664,16 @@ class JumperScene extends Phaser.Scene {
     }
   }
 
-  async saveCoinsToProfile() {
-    if (!this.supabase) return;
-    try {
-      const { data: { user } } = await this.supabase.auth.getUser();
-      if (!user) return;
-
-      const { data } = await this.supabase
-        .from('users')
-        .select('preferences')
-        .eq('id', user.id)
-        .single();
-
-      const prefs = (data?.preferences || {}) as any;
-      const current = Number(prefs.total_coins || 0);
-      const updated = current + this.score;
-
-      await this.supabase
-        .from('users')
-        .update({ preferences: { ...prefs, total_coins: updated } })
-        .eq('id', user.id);
-    } catch (error) {
-      console.error('Error saving coins:', error);
-    }
-  }
-
   update() {
     if (!this.player || !this.cursors) return;
 
-    // Horizontal movement with better feel (speed boost)
-    if (this.cursors.left?.isDown) {
-      const speed = this.playerBuffs.speed > 0 ? -450 : -300;
-      this.player.setVelocityX(speed);
+    // Horizontal movement with better feel
+    const currentSpeed = this.playerBuffs.speed > 0 ? 450 : 300;
+    if (this.cursors.left?.isDown || this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.A).isDown) {
+      this.player.setVelocityX(-currentSpeed);
       this.player.setFlipX(true); // Face left
-    } else if (this.cursors.right?.isDown) {
-      const speed = this.playerBuffs.speed > 0 ? 450 : 300;
-      this.player.setVelocityX(speed);
+    } else if (this.cursors.right?.isDown || this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.D).isDown) {
+      this.player.setVelocityX(currentSpeed);
       this.player.setFlipX(false); // Face right
     } else {
       this.player.setVelocityX(0);
@@ -694,33 +684,22 @@ class JumperScene extends Phaser.Scene {
       this.player.setVelocityY(-600);
     }
 
-    // WASD movement support
-    const aKey = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.A);
-    const dKey = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.D);
-    const wKey = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.W);
-
-    if (aKey?.isDown) {
-      this.player.setVelocityX(this.playerBuffs.speed > 0 ? -450 : -300);
-      this.player.setFlipX(true);
-    } else if (dKey?.isDown) {
-      this.player.setVelocityX(this.playerBuffs.speed > 0 ? 450 : 300);
-      this.player.setFlipX(false);
+    // Fall reset
+    if (this.player.y > this.cameras.main.scrollY + this.cameras.main.height + 200) {
+      this.resetPlayer();
     }
 
-    if (wKey?.isDown && this.player.body.touching.down) {
-      this.player.setVelocityY(-600);
+    // Speed timer
+    if (this.playerBuffs.speed > 0) {
+      this.playerBuffs.speed -= this.game.loop.delta;
+      if (this.playerBuffs.speed <= 0) this.speedEmitter?.stop();
     }
 
-    // Camera follow player (smooth)
-    if (this.cameras.main) {
-      this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
-      this.cameras.main.setDeadzone(100, 100);
+    // Shield timer
+    if (this.playerBuffs.shield > 0) {
+      this.playerBuffs.shield -= this.game.loop.delta;
+      if (this.playerBuffs.shield <= 0) this.shieldEmitter?.stop();
     }
-
-    // Buff timers (ms)
-    // Decrement timers using delta
-    // Handled in keyboard handlers too, but keep here for reliability
-    // (Phaser passes delta in update signature, but we're not typing it here)
 
     // Throttled position update (every 150ms instead of every frame)
     const now = Date.now();
@@ -728,6 +707,14 @@ class JumperScene extends Phaser.Scene {
       this.updatePlayerPosition();
       this.lastPositionUpdate = now;
     }
+  }
+
+  resetPlayer() {
+    this.player?.setPosition(1000, 1850); // Reset to a safe starting position
+    this.player?.setVelocity(0, 0);
+    this.playerBuffs = { speed: 0, doubleJump: 0, shield: 0 }; // Clear buffs
+    this.speedEmitter?.stop();
+    this.shieldEmitter?.stop();
   }
 }
 
@@ -740,6 +727,9 @@ export default function PlayPage() {
   const [roomId, setRoomId] = useState<string | null>(null);
 
   useEffect(() => {
+    // Only run on client side
+    if (typeof window === 'undefined') return;
+
     const supabase = createClient();
 
     async function initGame() {
@@ -793,7 +783,7 @@ export default function PlayPage() {
         setRoomId(currentRoomId);
 
         // Initialize Phaser game
-        if (canvasRef.current) {
+        if (canvasRef.current && typeof window !== 'undefined') {
           const config: Phaser.Types.Core.GameConfig = {
             type: Phaser.AUTO,
             parent: canvasRef.current,
@@ -894,4 +884,3 @@ export default function PlayPage() {
     </div>
   );
 }
-
