@@ -195,17 +195,19 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Right: Visual Placeholder */}
+            {/* Right: Hero Image */}
             <div className="relative">
-              <div className="card p-8 transform rotate-2 hover:rotate-0 transition-transform duration-300">
-                <div className="bg-gradient-to-br from-coral to-turquoise rounded-lg p-8 text-center min-h-[400px] flex flex-col items-center justify-center">
-                  <div className="text-6xl mb-4" role="img" aria-label="Magical story illustration placeholder">
-                    📚✨
-                  </div>
-                  <p className="font-fredoka text-2xl text-white mb-4">Sample Story Preview</p>
-                  <p className="font-nunito text-white/90">
-                    Beautiful AI-generated illustrations will appear here
-                  </p>
+              <div className="card p-4 transform rotate-2 hover:rotate-0 transition-transform duration-300">
+                <div className="relative rounded-lg overflow-hidden">
+                  <Image
+                    src="/images/homestory1.jpeg"
+                    alt="Magical AI-generated children's story illustration"
+                    width={600}
+                    height={400}
+                    className="w-full h-auto object-cover rounded-lg shadow-xl"
+                    priority
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none"></div>
                 </div>
               </div>
               {/* Decorative elements */}
@@ -263,27 +265,45 @@ export default function Home() {
           </p>
         </div>
         <div className="grid md:grid-cols-3 gap-8">
-          <div className="card text-center hover:shadow-2xl transition-shadow transform hover:-translate-y-2 duration-300">
-            <div className="text-6xl mb-6" role="img" aria-label="AI magic wand">
-              ✨
+          <div className="card text-center hover:shadow-2xl transition-shadow transform hover:-translate-y-2 duration-300 overflow-hidden">
+            <div className="mb-6 rounded-lg overflow-hidden">
+              <Image
+                src="/images/homestory2.jpeg"
+                alt="AI-Generated story example with magical characters"
+                width={300}
+                height={200}
+                className="w-full h-48 object-cover hover:scale-110 transition-transform duration-300"
+              />
             </div>
             <h3 className="font-fredoka text-2xl text-coral mb-4">AI-Generated Stories</h3>
             <p className="font-nunito text-gray-600 leading-relaxed">
               Custom stories tailored to your child&apos;s name, age, and interests using advanced AI technology. Every story is unique and age-appropriate.
             </p>
           </div>
-          <div className="card text-center hover:shadow-2xl transition-shadow transform hover:-translate-y-2 duration-300">
-            <div className="text-6xl mb-6" role="img" aria-label="Beautiful art palette">
-              🎨
+          <div className="card text-center hover:shadow-2xl transition-shadow transform hover:-translate-y-2 duration-300 overflow-hidden">
+            <div className="mb-6 rounded-lg overflow-hidden">
+              <Image
+                src="/images/homestory3.jpeg"
+                alt="Beautiful AI-generated story illustration"
+                width={300}
+                height={200}
+                className="w-full h-48 object-cover hover:scale-110 transition-transform duration-300"
+              />
             </div>
             <h3 className="font-fredoka text-2xl text-turquoise mb-4">Beautiful Images</h3>
             <p className="font-nunito text-gray-600 leading-relaxed">
               Stunning AI-generated illustrations for each story page, bringing the tale to life visually. Each image is custom-created for your story.
             </p>
           </div>
-          <div className="card text-center hover:shadow-2xl transition-shadow transform hover:-translate-y-2 duration-300">
-            <div className="text-6xl mb-6" role="img" aria-label="Audio narration microphone">
-              🎵
+          <div className="card text-center hover:shadow-2xl transition-shadow transform hover:-translate-y-2 duration-300 overflow-hidden">
+            <div className="mb-6 rounded-lg overflow-hidden">
+              <Image
+                src="/images/homestory4.jpeg"
+                alt="Children's story with audio narration feature"
+                width={300}
+                height={200}
+                className="w-full h-48 object-cover hover:scale-110 transition-transform duration-300"
+              />
             </div>
             <h3 className="font-fredoka text-2xl text-lemon mb-4">Audio Narration</h3>
             <p className="font-nunito text-gray-600 leading-relaxed">
