@@ -14,6 +14,13 @@ class JumperScene extends Phaser.Scene {
   private supabase?: any;
   private otherPlayers?: Phaser.GameObjects.Group;
   private playerLabels?: Phaser.GameObjects.Group;
+  private platforms?: Phaser.GameObjects.Group;
+  private coins?: Phaser.GameObjects.Group;
+  private score: number = 0;
+  private scoreText?: Phaser.GameObjects.Text;
+  private playerCountText?: Phaser.GameObjects.Text;
+  private lastPositionUpdate: number = 0;
+  private collectSound?: Phaser.Sound.BaseSound;
 
   init(data: { charUrl?: string; roomId?: string; supabase?: any }) {
     this.charUrl = data.charUrl;
@@ -21,28 +28,89 @@ class JumperScene extends Phaser.Scene {
     this.supabase = data.supabase;
     this.otherPlayers = this.add.group();
     this.playerLabels = this.add.group();
+    this.platforms = this.add.group();
+    this.coins = this.add.group();
   }
 
   create() {
+    // Set world bounds for camera scrolling
+    this.physics.world.setBounds(0, 0, 2000, 2000);
+    this.cameras.main.setBounds(0, 0, 2000, 2000);
+    
     const width = this.scale.width;
     const height = this.scale.height;
 
-    // Create ground
-    const ground = this.add.rectangle(width / 2, height - 50, width, 100, 0x4ECDC4);
+    // Create ground with visual style (full world width)
+    const ground = this.add.rectangle(1000, 1950, 2000, 100, 0x4ECDC4);
+    ground.setName('ground');
     this.physics.add.existing(ground, true);
+    const groundBody = ground.body as Phaser.Physics.Arcade.Body;
+    groundBody.setImmovable(true);
+    
+    // Add ground pattern/decorations
+    for (let i = 0; i < 20; i++) {
+      const grass = this.add.rectangle(100 + i * 100, 1920, 80, 30, 0x95E1D3);
+      grass.setDepth(-1);
+    }
 
-    // Create platforms
-    const platforms = [
-      { x: 200, y: height - 200, width: 150 },
-      { x: width - 200, y: height - 300, width: 150 },
-      { x: width / 2, y: height - 400, width: 200 },
+    // Create more dynamic platforms with better spacing (spread across world)
+    const platformConfigs = [
+      { x: 300, y: 1800, width: 180, height: 25 },
+      { x: 700, y: 1700, width: 180, height: 25 },
+      { x: 1000, y: 1550, width: 220, height: 25 },
+      { x: 150, y: 1450, width: 150, height: 25 },
+      { x: 850, y: 1350, width: 150, height: 25 },
+      { x: 500, y: 1250, width: 200, height: 25 },
+      { x: 1200, y: 1150, width: 180, height: 25 },
+      { x: 300, y: 1050, width: 180, height: 25 },
+      { x: 1500, y: 950, width: 200, height: 25 },
+      { x: 800, y: 850, width: 180, height: 25 },
     ];
 
-    platforms.forEach((plat) => {
-      const platform = this.add.rectangle(plat.x, plat.y, plat.width, 20, 0xFF6B6B);
+    platformConfigs.forEach((plat, index) => {
+      const platform = this.add.rectangle(plat.x, plat.y, plat.width, plat.height, 0xFF6B6B);
+      platform.setName(`platform-${index}`);
+      platform.setStrokeStyle(3, 0xFF4444);
       const body = this.physics.add.existing(platform, true);
       (body.body as Phaser.Physics.Arcade.Body).setImmovable(true);
+      this.platforms?.add(platform);
+
+      // Add coins on some platforms
+      if (index % 2 === 0) {
+        this.createCoin(plat.x, plat.y - 40);
+      }
+      // Add extra coins on some platforms
+      if (index % 3 === 0) {
+        this.createCoin(plat.x - 30, plat.y - 40);
+      }
     });
+
+    // Add collectible coins scattered around the world
+    for (let i = 0; i < 25; i++) {
+      this.createCoin(
+        Phaser.Math.Between(100, 1900),
+        Phaser.Math.Between(500, 1800)
+      );
+    }
+
+    // Create UI elements
+    this.scoreText = this.add.text(20, 20, 'Score: 0', {
+      fontSize: '24px',
+      color: '#000',
+      backgroundColor: '#fff',
+      padding: { x: 10, y: 5 },
+      fontFamily: 'Fredoka',
+    });
+    this.scoreText.setScrollFactor(0); // Fixed to camera
+
+    this.playerCountText = this.add.text(20, 60, 'Players: 1', {
+      fontSize: '18px',
+      color: '#666',
+      backgroundColor: '#fff',
+      padding: { x: 10, y: 5 },
+      fontFamily: 'Nunito',
+    });
+    this.playerCountText.setScrollFactor(0); // Fixed to camera
 
     // Load player character
     if (this.charUrl) {
@@ -61,11 +129,8 @@ class JumperScene extends Phaser.Scene {
   }
 
   createPlayer() {
-    const width = this.scale.width;
-    const height = this.scale.height;
-
-    // Create player sprite (circular for now, replace with character image)
-    this.player = this.physics.add.sprite(width / 2, height - 150, 'player-char');
+    // Create player sprite (use world coordinates)
+    this.player = this.physics.add.sprite(1000, 1850, 'player-char');
     
     // If image didn't load, create a default sprite
     if (!this.player.texture.key || this.player.texture.key === '__MISSING') {
@@ -79,44 +144,100 @@ class JumperScene extends Phaser.Scene {
     this.player.setCollideWorldBounds(true);
     this.player.setBounce(0.2);
     this.player.setDragX(200);
+    
+    // Add visual feedback on jump
+    this.player.setTint(0xFFFFFF);
 
-    // Collisions with ground and platforms
-    const ground = this.children.getByName('ground') as Phaser.GameObjects.Rectangle;
-    if (ground) {
-      this.physics.add.collider(this.player, ground);
-    }
-
-    // Collide with platforms
-    this.children.list.forEach((child) => {
-      if (child.name?.startsWith('platform-')) {
-        this.physics.add.collider(this.player, child as Phaser.GameObjects.Rectangle);
-      }
-    });
+    this.setupPlayerCollisions();
   }
 
   createDefaultPlayer() {
     const width = this.scale.width;
     const height = this.scale.height;
 
-    // Create a colorful default character
-    this.player = this.physics.add.sprite(width / 2, height - 150, null);
-    
-    // Draw a simple character shape
+    // Create a colorful default character with better visuals
     const graphics = this.add.graphics();
+    // Body (circle)
     graphics.fillStyle(0xFF6B6B, 1);
-    graphics.fillCircle(0, 0, 30);
+    graphics.fillCircle(0, 10, 25);
+    // Head (circle)
+    graphics.fillStyle(0xFFE66D, 1);
+    graphics.fillCircle(0, -15, 18);
+    // Eyes
+    graphics.fillStyle(0x000000, 1);
+    graphics.fillCircle(-5, -18, 2);
+    graphics.fillCircle(5, -18, 2);
+    // Smile
+    graphics.lineStyle(2, 0x000000);
+    graphics.arc(0, -12, 8, 0, Math.PI);
+    graphics.strokePath();
     graphics.generateTexture('default-char', 60, 60);
     graphics.destroy();
 
-    this.load.image('default-char-sprite', 'default-char');
-    this.load.once('complete', () => {
-      this.player?.destroy();
-      this.player = this.physics.add.sprite(width / 2, height - 150, 'default-char-sprite');
-      this.player.setCollideWorldBounds(true);
-      this.player.setBounce(0.2);
-      this.player.setDragX(200);
+    this.player = this.physics.add.sprite(1000, 1850, 'default-char');
+    this.player.setCollideWorldBounds(true);
+    this.player.setBounce(0.2);
+    this.player.setDragX(200);
+    this.setupPlayerCollisions();
+    
+    // Center camera on player initially
+    this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
+    this.cameras.main.setDeadzone(100, 100);
+  }
+
+  createCoin(x: number, y: number) {
+    const coin = this.physics.add.sprite(x, y, null);
+    
+    // Create coin graphic
+    const graphics = this.add.graphics();
+    graphics.fillStyle(0xFFE66D, 1); // Lemon color
+    graphics.fillCircle(0, 0, 15);
+    graphics.lineStyle(2, 0xFFD700);
+    graphics.strokeCircle(0, 0, 15);
+    graphics.generateTexture(`coin-${coin.x}-${coin.y}`, 30, 30);
+    graphics.destroy();
+
+    coin.setTexture(`coin-${coin.x}-${coin.y}`);
+    coin.setScale(0.8);
+    coin.setData('value', 10);
+    
+    // Add rotation animation
+    this.tweens.add({
+      targets: coin,
+      angle: 360,
+      duration: 2000,
+      repeat: -1,
+      ease: 'Linear',
     });
-    this.load.start();
+
+    this.coins?.add(coin);
+    return coin;
+  }
+
+  setupPlayerCollisions() {
+    if (!this.player) return;
+
+    // Collide with ground
+    const ground = this.children.getByName('ground') as Phaser.GameObjects.Rectangle;
+    if (ground) {
+      this.physics.add.collider(this.player, ground);
+    }
+
+    // Collide with all platforms
+    this.platforms?.children.entries.forEach((platform) => {
+      this.physics.add.collider(this.player, platform as Phaser.GameObjects.Rectangle);
+    });
+
+    // Collect coins
+    this.coins?.children.entries.forEach((coin) => {
+      this.physics.add.overlap(
+        this.player,
+        coin as Phaser.GameObjects.Sprite,
+        (player, coinSprite) => {
+          this.collectCoin(coinSprite as Phaser.GameObjects.Sprite);
+        }
+      );
+    });
   }
 
   setupInput() {
@@ -127,9 +248,83 @@ class JumperScene extends Phaser.Scene {
     spaceKey?.on('down', () => {
       if (this.player?.body.touching.down) {
         this.player.setVelocityY(-600);
+        // Visual feedback
+        this.player.setTint(0x4ECDC4);
+        this.time.delayedCall(100, () => {
+          this.player?.clearTint();
+        });
         this.updatePlayerPosition();
       }
     });
+
+    // WASD support
+    const wKey = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.W);
+    const aKey = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.A);
+    const sKey = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.S);
+    const dKey = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.D);
+
+    wKey?.on('down', () => {
+      if (this.player?.body.touching.down) {
+        this.player.setVelocityY(-600);
+        this.updatePlayerPosition();
+      }
+    });
+  }
+
+  collectCoin(coin: Phaser.GameObjects.Sprite) {
+    const value = coin.getData('value') || 10;
+    this.score += value;
+    
+    if (this.scoreText) {
+      this.scoreText.setText(`Score: ${this.score}`);
+    }
+
+    // Particle effect
+    const particles = this.add.particles(coin.x, coin.y, null, {
+      speed: { min: 50, max: 100 },
+      scale: { start: 0.5, end: 0 },
+      tint: 0xFFE66D,
+      lifespan: 500,
+      quantity: 5,
+    });
+
+    this.time.delayedCall(500, () => {
+      particles.destroy();
+    });
+
+    // Destroy coin
+    coin.destroy();
+    this.updatePlayerPosition();
+    
+    // Update score in database
+    if (this.roomId && this.supabase) {
+      this.updateGameState({ score: this.score });
+    }
+  }
+
+  async updateGameState(stateUpdate: any) {
+    if (!this.roomId || !this.supabase) return;
+
+    try {
+      const { data } = await this.supabase
+        .from('game_rooms')
+        .select('game_state')
+        .eq('id', this.roomId)
+        .single();
+
+      const gameState = (data?.game_state || {}) as any;
+      const updatedState = { ...gameState, ...stateUpdate };
+
+      await this.supabase
+        .from('game_rooms')
+        .update({
+          game_state: updatedState,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', this.roomId);
+    } catch (error) {
+      console.error('Error updating game state:', error);
+    }
   }
 
   async updatePlayerPosition() {
@@ -212,51 +407,97 @@ class JumperScene extends Phaser.Scene {
       const { data: { user } } = await this.supabase.auth.getUser();
       if (!user) return;
 
-      // Clear existing other players
-      this.otherPlayers?.clear(true, true);
-      this.playerLabels?.clear(true, true);
+      // Update player count
+      const playerCount = players.length;
+      if (this.playerCountText) {
+        this.playerCountText.setText(`Players: ${playerCount}`);
+      }
 
-      // Create sprites for other players
+      // Track existing sprites to avoid recreating
+      const existingSprites = new Map<string, any>();
+      this.otherPlayers?.children.entries.forEach((sprite: any) => {
+        const userId = sprite.getData('userId');
+        if (userId) existingSprites.set(userId, sprite);
+      });
+
+      const existingLabels = new Map<string, any>();
+      this.playerLabels?.children.entries.forEach((label: any) => {
+        const userId = label.getData('userId');
+        if (userId) existingLabels.set(userId, label);
+      });
+
+      // Remove players who left
+      const currentPlayerIds = new Set(players.map((p: any) => p.user_id));
+      existingSprites.forEach((sprite, userId) => {
+        if (userId !== user.id && !currentPlayerIds.has(userId)) {
+          sprite.destroy();
+          existingSprites.delete(userId);
+        }
+      });
+      existingLabels.forEach((label, userId) => {
+        if (userId !== user.id && !currentPlayerIds.has(userId)) {
+          label.destroy();
+          existingLabels.delete(userId);
+        }
+      });
+
+      // Create/update sprites for other players
       for (const playerData of players) {
         if (playerData.user_id === user.id) continue; // Skip self
 
-        // Find or create sprite for this player
-        let sprite = this.otherPlayers?.children.entries.find(
-          (child: any) => child.getData('userId') === playerData.user_id
-        ) as Phaser.Types.Physics.Arcade.SpriteWithDynamicBody | undefined;
+        let sprite = existingSprites.get(playerData.user_id);
 
         if (!sprite) {
           // Create new sprite
           sprite = this.physics.add.sprite(playerData.x || 100, playerData.y || 100, null);
           
-          // Create simple colored circle sprite
-          const graphics = this.add.graphics();
-          graphics.fillStyle(0x4ECDC4, 1);
-          graphics.fillCircle(0, 0, 30);
-          graphics.generateTexture(`other-char-${playerData.user_id}`, 60, 60);
-          graphics.destroy();
+          // Try to load character image if available
+          if (playerData.char_url) {
+            this.load.image(`other-char-${playerData.user_id}`, playerData.char_url);
+            this.load.once('complete', () => {
+              sprite.setTexture(`other-char-${playerData.user_id}`);
+              sprite.setScale(0.5);
+            });
+            this.load.start();
+          } else {
+            // Default colored character with better design
+            const graphics = this.add.graphics();
+            graphics.fillStyle(0x4ECDC4, 1);
+            graphics.fillCircle(0, 10, 25);
+            graphics.fillStyle(0xFFE66D, 1);
+            graphics.fillCircle(0, -15, 18);
+            graphics.generateTexture(`other-char-${playerData.user_id}`, 60, 60);
+            graphics.destroy();
+            sprite.setTexture(`other-char-${playerData.user_id}`);
+            sprite.setScale(0.5);
+          }
 
-          sprite.setTexture(`other-char-${playerData.user_id}`);
-          sprite.setScale(0.5);
+          sprite.setCollideWorldBounds(true);
           sprite.setData('userId', playerData.user_id);
           this.otherPlayers?.add(sprite);
+          existingSprites.set(playerData.user_id, sprite);
         }
 
-        // Update position smoothly
-        if (sprite) {
-          this.tweens.add({
-            targets: sprite,
-            x: playerData.x || sprite.x,
-            y: playerData.y || sprite.y,
-            duration: 100,
-            ease: 'Power2',
-          });
+        // Smooth position interpolation
+        if (sprite && (playerData.x !== undefined || playerData.y !== undefined)) {
+          const targetX = playerData.x ?? sprite.x;
+          const targetY = playerData.y ?? sprite.y;
+          
+          // Only tween if there's significant movement (reduces network lag issues)
+          const distance = Phaser.Math.Distance.Between(sprite.x, sprite.y, targetX, targetY);
+          if (distance > 5) {
+            this.tweens.add({
+              targets: sprite,
+              x: targetX,
+              y: targetY,
+              duration: 150,
+              ease: 'Power2',
+            });
+          }
         }
 
         // Update or create name label
-        let label = this.playerLabels?.children.entries.find(
-          (child: any) => child.getData('userId') === playerData.user_id
-        ) as Phaser.GameObjects.Text | undefined;
+        let label = existingLabels.get(playerData.user_id);
 
         if (!label) {
           label = this.add.text(playerData.x || 100, (playerData.y || 100) - 40, playerData.name || 'Player', {
@@ -264,12 +505,18 @@ class JumperScene extends Phaser.Scene {
             color: '#000',
             backgroundColor: '#fff',
             padding: { x: 4, y: 2 },
+            fontFamily: 'Fredoka',
           });
+          label.setScrollFactor(0); // Follow player but stay visible
           label.setData('userId', playerData.user_id);
           this.playerLabels?.add(label);
+          existingLabels.set(playerData.user_id, label);
         } else {
-          label.setX((playerData.x || label.x) - 20);
-          label.setY((playerData.y || label.y) - 40);
+          // Update label position to follow sprite
+          if (sprite) {
+            label.setX(sprite.x - label.width / 2);
+            label.setY(sprite.y - 40);
+          }
         }
       }
     } catch (error) {
@@ -280,25 +527,50 @@ class JumperScene extends Phaser.Scene {
   update() {
     if (!this.player || !this.cursors) return;
 
-    // Horizontal movement
+    // Horizontal movement with better feel
     if (this.cursors.left?.isDown) {
       this.player.setVelocityX(-300);
+      this.player.setFlipX(true); // Face left
     } else if (this.cursors.right?.isDown) {
       this.player.setVelocityX(300);
+      this.player.setFlipX(false); // Face right
     } else {
       this.player.setVelocityX(0);
     }
 
-    // Jump
+    // Jump with double jump prevention
     if (this.cursors.up?.isDown && this.player.body.touching.down) {
       this.player.setVelocityY(-600);
     }
 
-    // Update position periodically (throttled)
-    if (!this.time.delayedCall) {
-      this.time.delayedCall(100, () => {
-        this.updatePlayerPosition();
-      });
+    // WASD movement support
+    const aKey = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.A);
+    const dKey = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.D);
+    const wKey = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.W);
+
+    if (aKey?.isDown) {
+      this.player.setVelocityX(-300);
+      this.player.setFlipX(true);
+    } else if (dKey?.isDown) {
+      this.player.setVelocityX(300);
+      this.player.setFlipX(false);
+    }
+
+    if (wKey?.isDown && this.player.body.touching.down) {
+      this.player.setVelocityY(-600);
+    }
+
+    // Camera follow player (smooth)
+    if (this.cameras.main) {
+      this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
+      this.cameras.main.setDeadzone(100, 100);
+    }
+
+    // Throttled position update (every 150ms instead of every frame)
+    const now = Date.now();
+    if (now - this.lastPositionUpdate > 150) {
+      this.updatePlayerPosition();
+      this.lastPositionUpdate = now;
     }
   }
 }
@@ -384,6 +656,13 @@ export default function PlayPage() {
               mode: Phaser.Scale.RESIZE,
               autoCenter: Phaser.Scale.CENTER_BOTH,
             },
+            scene: {
+              create: function() {
+                // Set world bounds for scrolling
+                this.physics.world.setBounds(0, 0, 2000, 2000);
+                this.cameras.main.setBounds(0, 0, 2000, 2000);
+              }
+            },
             callbacks: {
               preBoot: () => ({
                 charUrl,
@@ -441,12 +720,15 @@ export default function PlayPage() {
   return (
     <div className="fixed inset-0 z-50">
       <div ref={canvasRef} id="game-container" className="w-full h-full" />
-      <div className="absolute top-4 left-4 bg-white/90 rounded-lg p-3 shadow-lg">
+      <div className="absolute top-4 left-4 bg-white/90 rounded-lg p-3 shadow-lg z-10">
         <p className="font-nunito text-sm">
-          <strong>Controls:</strong> Arrow keys to move, Space/Up to jump
+          <strong>Controls:</strong> Arrow Keys/WASD to move, Space/Up/W to jump
+        </p>
+        <p className="font-nunito text-xs text-gray-600 mt-1">
+          🪙 Collect coins • 🎯 Reach the top!
         </p>
         {roomId && (
-          <p className="font-nunito text-xs text-gray-600 mt-1">Room: {roomId}</p>
+          <p className="font-nunito text-xs text-gray-500 mt-1">Room: {roomId.slice(0, 20)}...</p>
         )}
       </div>
       <button
