@@ -656,13 +656,6 @@ export default function PlayPage() {
               mode: Phaser.Scale.RESIZE,
               autoCenter: Phaser.Scale.CENTER_BOTH,
             },
-            scene: {
-              create: function() {
-                // Set world bounds for scrolling
-                this.physics.world.setBounds(0, 0, 2000, 2000);
-                this.cameras.main.setBounds(0, 0, 2000, 2000);
-              }
-            },
             callbacks: {
               preBoot: () => ({
                 charUrl,
