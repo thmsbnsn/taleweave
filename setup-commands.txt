@@ -1,0 +1,32 @@
+# Copy and paste these commands into your Hostinger SSH terminal
+
+# Step 1: Navigate to public_html
+cd public_html
+
+# Step 2: Download and run the setup script
+curl -o setup.sh https://raw.githubusercontent.com/yourusername/taleweave/main/scripts/server-setup.sh
+# OR if curl doesn't work, copy the script manually, then:
+bash setup.sh
+
+# Alternative: Run commands manually one by one:
+
+# Install dependencies
+npm install --production
+
+# Create .env.local (copy content from ENV_SETUP.md or SETUP_ON_SERVER.md)
+nano .env.local
+
+# Install PM2
+npm install -g pm2
+
+# Start application
+pm2 start npm --name "taleweave" -- start
+
+# Save PM2 config
+pm2 save
+pm2 startup
+
+# Check status
+pm2 status
+pm2 logs taleweave
+
