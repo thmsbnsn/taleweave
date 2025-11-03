@@ -46,17 +46,34 @@ CREATE TABLE IF NOT EXISTS public.user_credits (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- Characters table (for TaleWeave Academy)
+CREATE TABLE IF NOT EXISTS public.characters (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  user_id UUID REFERENCES public.users(id) ON DELETE CASCADE,
+  story_id UUID REFERENCES public.stories(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  age INTEGER NOT NULL,
+  appearance TEXT,
+  personality TEXT,
+  image_url TEXT,
+  voice_id TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 -- Indexes for better query performance
 CREATE INDEX IF NOT EXISTS idx_stories_user_id ON public.stories(user_id);
 CREATE INDEX IF NOT EXISTS idx_stories_status ON public.stories(status);
 CREATE INDEX IF NOT EXISTS idx_story_pages_story_id ON public.story_pages(story_id);
 CREATE INDEX IF NOT EXISTS idx_user_credits_user_id ON public.user_credits(user_id);
+CREATE INDEX IF NOT EXISTS idx_characters_user_id ON public.characters(user_id);
+CREATE INDEX IF NOT EXISTS idx_characters_story_id ON public.characters(story_id);
 
 -- Row Level Security (RLS) Policies
 ALTER TABLE public.stories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.story_pages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_credits ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.characters ENABLE ROW LEVEL SECURITY;
 
 -- Policies for stories
 CREATE POLICY "Users can view their own stories"
@@ -104,6 +121,19 @@ CREATE POLICY "Users can update their own profile"
 -- Policies for user_credits
 CREATE POLICY "Users can view their own credits"
   ON public.user_credits FOR SELECT
+  USING (auth.uid() = user_id);
+
+-- Policies for characters
+CREATE POLICY "Users can view their own characters"
+  ON public.characters FOR SELECT
+  USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can create their own characters"
+  ON public.characters FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update their own characters"
+  ON public.characters FOR UPDATE
   USING (auth.uid() = user_id);
 
 -- Function to create user profile on signup

@@ -253,6 +253,90 @@ export async function POST(request: NextRequest) {
       })
       .eq('id', story.id)
 
+    // Auto-generate and save character profile for TaleWeave Academy
+    try {
+      const firstPageImage = pagesWithImages[0]?.imageUrl || null
+      const voiceId = 'Rachel' // The voice used for narration
+
+      // Extract character appearance and personality from the story using AI
+      const characterPrompt = `Based on this children's story, extract the main character's details:
+      
+Story: ${storyText.substring(0, 1000)}
+
+The main character is ${childName}, age ${age}. Extract and provide:
+1. Appearance: Physical description (hair color, clothing, distinctive features)
+2. Personality: Character traits, behaviors, interests (from: ${interests})
+
+Respond in JSON format:
+{
+  "appearance": "description here",
+  "personality": "traits here"
+}`
+
+      const characterCompletion = await openai.chat.completions.create({
+        model: 'gpt-4o',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are a character profile extractor. Extract character details from stories and return only valid JSON.',
+          },
+          {
+            role: 'user',
+            content: characterPrompt,
+          },
+        ],
+        temperature: 0.7,
+        max_tokens: 300,
+        response_format: { type: 'json_object' },
+      })
+
+      let appearance = `A ${age}-year-old child`
+      let personality = interests
+
+      try {
+        const characterData = JSON.parse(characterCompletion.choices[0].message.content || '{}')
+        if (characterData.appearance) {
+          appearance = characterData.appearance
+        }
+        if (characterData.personality) {
+          personality = characterData.personality
+        }
+      } catch (parseError) {
+        console.error('Error parsing character data:', parseError)
+        // Use fallback values already set above
+      }
+
+      // Get the first page image URL from Supabase if available
+      let characterImageUrl = firstPageImage
+      if (firstPageImage && pageRecords && pageRecords[0]?.image_url) {
+        characterImageUrl = pageRecords[0].image_url
+      }
+
+      // Save character to database
+      const { error: characterError } = await supabase
+        .from('characters')
+        .insert({
+          user_id: user.id,
+          story_id: story.id,
+          name: childName,
+          age: parseInt(age),
+          appearance,
+          personality,
+          image_url: characterImageUrl,
+          voice_id: voiceId,
+        })
+
+      if (characterError) {
+        console.error('Error saving character:', characterError)
+        // Don't fail the story creation if character save fails
+      } else {
+        console.log('Character profile saved successfully for:', childName)
+      }
+    } catch (characterError) {
+      console.error('Error generating character profile:', characterError)
+      // Don't fail the story creation if character generation fails
+    }
+
     return NextResponse.json({ 
       storyId: story.id,
       message: 'Story created successfully'

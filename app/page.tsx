@@ -106,6 +106,11 @@ export default function Home() {
             <Link href="/#how-it-works" className="font-nunito text-gray-700 hover:text-coral transition">
               How It Works
             </Link>
+            {user && (
+              <Link href="/learn" className="font-nunito text-gray-700 hover:text-coral transition">
+                Academy
+              </Link>
+            )}
             {!user && (
               <Link href="/pricing" className="font-nunito text-gray-700 hover:text-coral transition">
                 Pricing
