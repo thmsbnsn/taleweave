@@ -54,7 +54,25 @@ export async function updateSession(request: NextRequest) {
     }
   )
 
-  await supabase.auth.getUser()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  // Check app lock status (skip for public routes)
+  if (user && !request.nextUrl.pathname.startsWith('/locked') && 
+      !request.nextUrl.pathname.startsWith('/login') && 
+      !request.nextUrl.pathname.startsWith('/signup') &&
+      !request.nextUrl.pathname.startsWith('/auth')) {
+    const { data: profile } = await supabase
+      .from('users')
+      .select('app_locked')
+      .eq('id', user.id)
+      .single()
+
+    if (profile?.app_locked) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/locked'
+      return NextResponse.redirect(url)
+    }
+  }
 
   return response
 }

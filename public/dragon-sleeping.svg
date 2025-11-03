@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="240" height="240" viewBox="0 0 240 240" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <title>Sleeping Dragon</title>
+
+  <!-- Background Circle (soft mint glow) -->
+  <circle cx="120" cy="120" r="110" fill="#95E1D3" opacity="0.3"/>
+
+  <!-- Dragon Body (curled up) -->
+  <path d="M80 140 
+           C70 130, 60 110, 70 90
+           C80 70, 100 60, 120 65
+           C140 70, 160 85, 165 105
+           C170 125, 155 145, 135 150
+           C115 155, 90 150, 80 140"
+        fill="#4ECDC4" stroke="#2A9D8F" stroke-width="3"/>
+
+  <!-- Belly (lighter) -->
+  <path d="M85 135
+           C95 140, 110 142, 125 138
+           C135 134, 140 125, 135 115
+           C130 105, 115 100, 100 105
+           C90 110, 85 120, 85 135"
+        fill="#95E1D3"/>
+
+  <!-- Head -->
+  <ellipse cx="70" cy="85" rx="28" ry="25" fill="#4ECDC4" stroke="#2A9D8F" stroke-width="3"/>
+  
+  <!-- Snout -->
+  <ellipse cx="55" cy="88" rx="15" ry="12" fill="#95E1D3"/>
+
+  <!-- Nostril -->
+  <circle cx="50" cy="86" r="2" fill="#2A9D8F"/>
+
+  <!-- Eye (closed) -->
+  <path d="M62 80 Q68 78, 74 80" stroke="#2A9D8F" stroke-width="2" fill="none" stroke-linecap="round"/>
+
+  <!-- Horns -->
+  <path d="M75 65 Q78 58, 80 60" fill="none" stroke="#FFE66D" stroke-width="4" stroke-linecap="round"/>
+  <path d="M65 63 Q62 56, 60 58" fill="none" stroke="#FFE66D" stroke-width="4" stroke-linecap="round"/>
+
+  <!-- Wings (folded) -->
+  <path d="M135 110
+           C145 105, 155 100, 160 105
+           C158 115, 148 120, 140 118"
+        fill="#FF6B6B" opacity="0.7"/>
+  <path d="M130 115
+           C140 110, 150 105, 155 110
+           C153 120, 143 125, 135 123"
+        fill="#FF6B6B" opacity="0.5"/>
+
+  <!-- Tail (curled with heart tip) -->
+  <path d="M165 105
+           Q175 115, 175 130
+           Q175 145, 165 150
+           Q155 155, 145 145
+           Q140 135, 145 125
+           Q150 115, 160 115
+           Z"
+        fill="#4ECDC4" stroke="#2A9D8F" stroke-width="2"/>
+
+  <!-- Zzz (sleep bubbles) -->
+  <g className="zzz">
+    <circle cx="50" cy="50" r="6" fill="#FFFFFF" opacity="0.8"/>
+    <circle cx="40" cy="40" r="4" fill="#FFFFFF" opacity="0.6"/>
+    <circle cx="32" cy="34" r="3" fill="#FFFFFF" opacity="0.4"/>
+    <text x="45" y="55" font-family="Fredoka, sans-serif" font-size="14" fill="#4ECDC4" font-weight="bold">Z</text>
+    <text x="35" y="45" font-family="Fredoka, sans-serif" font-size="12" fill="#4ECDC4" font-weight="bold">z</text>
+    <text x="27" y="38" font-family="Fredoka, sans-serif" font-size="10" fill="#4ECDC4" font-weight="bold">z</text>
+  </g>
+
+  <!-- Breathing Animation -->
+  <style>
+    {`
+    .zzz {
+      animation: float 3s ease-in-out infinite;
+    }
+    @keyframes float {
+      0%, 100% { transform: translateY(0); opacity: 0.8; }
+      50% { transform: translateY(-10px); opacity: 0.4; }
+    }
+    `}
+  </style>
+</svg>

@@ -1,22 +1,67 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 
 export const dynamic = 'force-dynamic'
 
+interface Character {
+  id: string
+  name: string
+  age: number
+  appearance: string | null
+  personality: string | null
+  image_url: string | null
+  voice_settings: any
+}
+
 export default function CreateStoryPage() {
   const router = useRouter()
   const supabase = createClient()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [characters, setCharacters] = useState<Character[]>([])
+  const [selectedCharacterId, setSelectedCharacterId] = useState<string>('')
   const [formData, setFormData] = useState({
     childName: '',
     age: '',
     interests: '',
   })
+
+  // Load user's characters
+  useEffect(() => {
+    async function loadCharacters() {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      const { data } = await supabase
+        .from('characters')
+        .select('id, name, age, appearance, personality, image_url, voice_settings')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+
+      if (data) {
+        setCharacters(data)
+      }
+    }
+    loadCharacters()
+  }, [supabase])
+
+  // Auto-fill form when character is selected
+  useEffect(() => {
+    if (selectedCharacterId && characters.length > 0) {
+      const character = characters.find(c => c.id === selectedCharacterId)
+      if (character) {
+        setFormData({
+          childName: character.name,
+          age: character.age.toString(),
+          interests: `${character.appearance || ''} ${character.personality || ''}`.trim() || '',
+        })
+      }
+    }
+  }, [selectedCharacterId, characters])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -32,11 +77,14 @@ export default function CreateStoryPage() {
         return
       }
 
-      // Create story
+      // Create story with optional character
       const response = await fetch('/api/stories/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          characterId: selectedCharacterId || undefined,
+        }),
       })
 
       const data = await response.json()
@@ -107,6 +155,40 @@ export default function CreateStoryPage() {
         )}
 
         <form onSubmit={handleSubmit} className="card space-y-6">
+          {/* Character Selector */}
+          {characters.length > 0 && (
+            <div>
+              <label htmlFor="character" className="block font-fredoka text-xl text-gray-800 mb-2">
+                Use Saved Character (Optional)
+              </label>
+              <select
+                id="character"
+                value={selectedCharacterId}
+                onChange={(e) => setSelectedCharacterId(e.target.value)}
+                className="input-field"
+              >
+                <option value="">Create new story (no character)</option>
+                {characters.map((char) => (
+                  <option key={char.id} value={char.id}>
+                    {char.name} (Age {char.age})
+                  </option>
+                ))}
+              </select>
+              <p className="text-sm text-gray-600 mt-2 font-nunito">
+                Select a character to auto-fill the form, or choose &quot;Create new story&quot; to start fresh.
+              </p>
+            </div>
+          )}
+
+          <div className="flex justify-between items-center">
+            <h2 className="font-fredoka text-2xl text-turquoise">Story Details</h2>
+            {characters.length === 0 && (
+              <Link href="/characters/create" className="btn-secondary text-sm">
+                Create Character First
+              </Link>
+            )}
+          </div>
+
           <div>
             <label htmlFor="childName" className="block font-fredoka text-xl text-gray-800 mb-2">
               Child&apos;s Name

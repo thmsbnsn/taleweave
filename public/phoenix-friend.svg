@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="220" height="240" viewBox="0 0 220 240" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <title>Phoenix Friend</title>
+
+  <!-- Background Flame Glow -->
+  <circle cx="110" cy="120" r="100" fill="#FF6B6B" opacity="0.15"/>
+  <circle cx="110" cy="120" r="80" fill="#FFE66D" opacity="0.1"/>
+
+  <!-- Body (fiery core) -->
+  <ellipse cx="110" cy="130" rx="50" ry="60" fill="#FF6B6B" stroke="#E76F51" stroke-width="3"/>
+  
+  <!-- Belly (golden) -->
+  <ellipse cx="110" cy="135" rx="35" ry="45" fill="#FFE66D" opacity="0.8"/>
+
+  <!-- Head -->
+  <circle cx="110" cy="80" r="35" fill="#FF6B6B" stroke="#E76F51" stroke-width="3"/>
+
+  <!-- Beak -->
+  <path d="M110 95 L120 100 L110 105 Z" fill="#2A9D8F"/>
+
+  <!-- Eyes (fiery glow) -->
+  <g className="eyes">
+    <ellipse cx="100" cy="75" rx="8" ry="10" fill="#FFFFFF" stroke="#E76F51" stroke-width="2"/>
+    <circle cx="101" cy="75" r="4" fill="#E76F51"/>
+    <circle cx="102" cy="74" r="2" fill="#FFFFFF" opacity="0.9"/>
+
+    <ellipse cx="120" cy="75" rx="8" ry="10" fill="#FFFFFF" stroke="#E76F51" stroke-width="2"/>
+    <circle cx="121" cy="75" r="4" fill="#E76F51"/>
+    <circle cx="122" cy="74" r="2" fill="#FFFFFF" opacity="0.9"/>
+  </g>
+
+  <!-- Crest (flame crown) -->
+  <path d="M95 60 Q100 50, 105 60
+           Q110 50, 115 60
+           Q120 50, 125 60"
+        fill="none" stroke="#FFE66D" stroke-width="5" stroke-linecap="round"
+        className="crest-flame"/>
+
+  <!-- Wings (spread on win) -->
+  <g className="wings">
+    <!-- Left Wing -->
+    <path d="M70 120
+             Q50 110, 40 130
+             Q45 150, 65 140
+             Q75 135, 70 120"
+          fill="#FF6B6B" opacity="0.9"/>
+    <path d="M65 125
+             Q45 115, 35 135
+             Q40 155, 60 145
+             Q70 140, 65 125"
+          fill="#E76F51" opacity="0.8"/>
+
+    <!-- Right Wing -->
+    <path d="M150 120
+             Q170 110, 180 130
+             Q175 150, 155 140
+             Q145 135, 150 120"
+          fill="#FF6B6B" opacity="0.9"/>
+    <path d="M155 125
+             Q175 115, 185 135
+             Q180 155, 160 145
+             Q150 140, 155 125"
+          fill="#E76F51" opacity="0.8"/>
+  </g>
+
+  <!-- Tail Feathers (fiery trail) -->
+  <g className="tail">
+    <path d="M110 170
+             Q100 190, 95 200
+             Q105 195, 110 185
+             Q115 195, 120 200
+             Q115 190, 110 170"
+          fill="#FF6B6B"/>
+    <path d="M110 175
+             Q95 200, 85 210
+             Q100 200, 110 185
+             Q120 200, 135 210
+             Q120 200, 110 175"
+          fill="#FFE66D" opacity="0.9"/>
+  </g>
+
+  <!-- Flame Particles (rising embers) -->
+  <g className="embers">
+    <circle cx="90" cy="100" r="3" fill="#FFE66D" opacity="0.9"/>
+    <circle cx="85" cy="90" r="2.5" fill="#FFE66D" opacity="0.7"/>
+    <circle cx="130" cy="100" r="3" fill="#FFE66D" opacity="0.9"/>
+    <circle cx="135" cy="90" r="2" fill="#FFE66D" opacity="0.6"/>
+  </g>
+
+  <!-- Heart Flame (encouragement badge) -->
+  <path d="M110 110
+           Q105 105, 100 110
+           Q95 115, 100 120
+           Q105 125, 110 123
+           Q115 125, 120 120
+           Q125 115, 120 110
+           Q115 105, 110 110
+           Z"
+        fill="#FFE66D" className="heart-flame"/>
+
+  <!-- Animations -->
+  <style>
+    {`
+    .eyes, .crest-flame, .wings, .tail, .embers, .heart-flame {
+      animation: phoenixRise 3s ease-in-out infinite;
+    }
+    .crest-flame {
+      stroke-dasharray: 10;
+      animation: flamePulse 1.5s ease-in-out infinite;
+    }
+    .wings {
+      transform-origin: 110px 120px;
+    }
+    .wings { animation: wingFlap 2s ease-in-out infinite; }
+    .embers { animation: rise 2.5s ease-out infinite; }
+    .heart-flame { animation: heartbeat 1.8s ease-in-out infinite; }
+
+    @keyframes phoenixRise {
+      0%, 100% { transform: translateY(0) scale(1); }
+      50% { transform: translateY(-10px) scale(1.05); }
+    }
+    @keyframes flamePulse {
+      0% { stroke: #FFE66D; filter: drop-shadow(0 0 3px #FFE66D); }
+      100% { stroke: #FFF; filter: drop-shadow(0 0 10px #FFE66D); }
+    }
+    @keyframes wingFlap {
+      0%, 100% { transform: rotate(0deg); }
+      50% { transform: rotate(8deg); }
+    }
+    @keyframes rise {
+      0% { transform: translateY(0); opacity: 0.9; }
+      100% { transform: translateY(-40px); opacity: 0; }
+    }
+    @keyframes heartbeat {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.2); }
+    }
+    `}
+  </style>
+</svg>
