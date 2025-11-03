@@ -76,9 +76,37 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // TODO: Send email with invitation link
-    // For now, return the invitation link
     const invitationLink = `${process.env.NEXT_PUBLIC_APP_URL}/parents/accept-invite?token=${invitationToken}`
+
+    // Get inviter and child info for email
+    const { data: inviterData } = await supabase
+      .from('users')
+      .select('email')
+      .eq('id', user.id)
+      .single()
+
+    const { data: childData } = await supabase
+      .from('users')
+      .select('display_name, username')
+      .eq('id', childId)
+      .single()
+
+    // Send invitation email
+    try {
+      const { sendCoParentInvitation } = await import('@/lib/email')
+      const inviterName = inviterData?.email?.split('@')[0] || 'A parent'
+      const childName = childData?.display_name || childData?.username || 'your child'
+      
+      await sendCoParentInvitation({
+        to: invitedEmail.toLowerCase(),
+        inviterName: inviterName.charAt(0).toUpperCase() + inviterName.slice(1),
+        childName,
+        invitationLink,
+      })
+    } catch (emailError) {
+      console.error('Error sending invitation email:', emailError)
+      // Continue even if email fails - we still return the link
+    }
 
     return NextResponse.json({
       success: true,
@@ -88,7 +116,8 @@ export async function POST(request: NextRequest) {
         link: invitationLink,
         expires_at: invitation.expires_at,
       },
-      message: 'Invitation created successfully!',
+      message: 'Invitation sent! The co-parent should receive an email with the invitation link.',
+      emailSent: true,
     })
   } catch (error: any) {
     console.error('Error creating invitation:', error)

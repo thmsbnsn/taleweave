@@ -123,6 +123,28 @@ export async function POST(request: NextRequest) {
       console.warn('Warning: Could not create parent_children link:', linkError)
     }
 
+    // Get parent email for notification
+    const { data: parentData } = await supabase
+      .from('users')
+      .select('email')
+      .eq('id', user.id)
+      .single()
+
+    // Send confirmation email to parent
+    try {
+      const { sendChildAccountCreated } = await import('@/lib/email')
+      if (parentData?.email) {
+        await sendChildAccountCreated({
+          to: parentData.email,
+          childName: displayName,
+          username: username.toLowerCase(),
+        })
+      }
+    } catch (emailError) {
+      console.error('Error sending child account email:', emailError)
+      // Continue even if email fails
+    }
+
     return NextResponse.json({
       success: true,
       child: {

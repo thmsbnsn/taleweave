@@ -66,14 +66,23 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Create parent_children link
+    // Create parent_children link with co_parent role and default permissions
     const { error: linkError } = await supabase
       .from('parent_children')
       .insert({
         parent_id: user.id,
         child_id: invitation.child_id,
         relationship_type: 'co_parent',
+        role: 'co_parent',
         invited_by: invitation.inviter_id,
+        permissions: {
+          can_manage_access: true,
+          can_create_stories: true,
+          can_view_progress: true,
+          can_manage_characters: true,
+          can_invite_others: false,
+          can_remove_children: false,
+        },
         status: 'active',
       })
 

@@ -7,6 +7,7 @@ import Image from 'next/image';
 import { createClient } from '@/lib/supabase/client';
 import { VoiceRecorder } from '@/components/VoiceRecorder';
 import { VoicePreview } from '@/components/VoicePreview';
+import { ChildProfileEditor } from '@/components/ChildProfileEditor';
 
 type Child = { 
   id: string; 
@@ -15,6 +16,16 @@ type Child = {
   display_name?: string;
   avatar_url?: string;
   is_locked?: boolean;
+  favorite_color?: string;
+};
+
+type ParentRole = {
+  id: string;
+  parent_id: string;
+  role: 'primary_parent' | 'co_parent' | 'guardian';
+  permissions: any;
+  parent_email?: string;
+  parent_name?: string;
 };
 
 type Report = { week: string; stars: number; comment: string; voice_url?: string };
@@ -28,7 +39,13 @@ export default function ParentDashboard() {
   const [reports, setReports] = useState<Report[]>([]);
   const [showCreateChild, setShowCreateChild] = useState(false);
   const [showInviteParent, setShowInviteParent] = useState(false);
+  const [showProfileEditor, setShowProfileEditor] = useState(false);
+  const [showRoleManagement, setShowRoleManagement] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [parentRoles, setParentRoles] = useState<ParentRole[]>([]);
+  const [userRole, setUserRole] = useState<'primary_parent' | 'co_parent' | 'guardian' | null>(null);
+  const [childProfile, setChildProfile] = useState<any>(null);
+  const [childPreferences, setChildPreferences] = useState<any>(null);
 
   // Load parent + children
   useEffect(() => {
@@ -314,27 +331,63 @@ export default function ParentDashboard() {
 
               {selectedChild && (
                 <div className="mt-6 space-y-4">
+                  {/* Role Badge */}
+                  {userRole && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-nunito text-gray-600">Your role:</span>
+                      <span className={`px-3 py-1 rounded-full text-sm font-fredoka ${
+                        userRole === 'primary_parent' 
+                          ? 'bg-coral text-white' 
+                          : userRole === 'co_parent'
+                          ? 'bg-turquoise text-white'
+                          : 'bg-gray-300 text-gray-700'
+                      }`}>
+                        {userRole === 'primary_parent' ? 'Primary Parent' : 
+                         userRole === 'co_parent' ? 'Co-Parent' : 'Guardian'}
+                      </span>
+                    </div>
+                  )}
+
                   <div className="flex items-center gap-4">
                     <label className="flex items-center gap-3 cursor-pointer">
                       <input
                         type="checkbox"
                         checked={!locked}
                         onChange={toggleLock}
-                        className="w-6 h-6 text-coral"
+                        disabled={userRole === 'guardian'}
+                        className="w-6 h-6 text-coral disabled:opacity-50"
                       />
                       <span className="font-nunito text-lg">
                         {locked ? 'App Locked' : 'App Unlocked'}
                       </span>
+                      {userRole === 'guardian' && (
+                        <span className="text-xs text-gray-500">(Guardian cannot change)</span>
+                      )}
                     </label>
                   </div>
 
-                  <div className="pt-4 border-t">
+                  <div className="pt-4 border-t flex flex-wrap gap-2">
+                    <button
+                      onClick={() => setShowProfileEditor(true)}
+                      className="btn-secondary text-sm"
+                    >
+                      Edit Profile
+                    </button>
                     <button
                       onClick={() => setShowInviteParent(true)}
                       className="btn-secondary text-sm"
+                      disabled={userRole !== 'primary_parent'}
                     >
                       Invite Co-Parent
                     </button>
+                    {userRole === 'primary_parent' && (
+                      <button
+                        onClick={() => setShowRoleManagement(true)}
+                        className="btn-secondary text-sm"
+                      >
+                        Manage Roles
+                      </button>
+                    )}
                   </div>
                 </div>
               )}
@@ -374,6 +427,122 @@ export default function ParentDashboard() {
                 {loading ? 'Sending...' : 'Send Invitation'}
               </button>
             </form>
+          </section>
+        )}
+
+        {/* ==== Child Profile Editor ==== */}
+        {showProfileEditor && selectedChild && (
+          <section className="card p-6 mb-8 border-2 border-turquoise">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="font-fredoka text-2xl text-turquoise">
+                Edit {selectedChild.name}&apos;s Profile
+              </h2>
+              <button
+                onClick={() => {
+                  setShowProfileEditor(false);
+                  window.location.reload();
+                }}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                ✕
+              </button>
+            </div>
+            <ChildProfileEditor
+              childId={selectedChild.id}
+              initialProfile={childProfile}
+              initialPreferences={childPreferences}
+              onSave={() => {
+                setShowProfileEditor(false);
+                window.location.reload();
+              }}
+            />
+          </section>
+        )}
+
+        {/* ==== Role Management ==== */}
+        {showRoleManagement && selectedChild && userRole === 'primary_parent' && (
+          <section className="card p-6 mb-8 border-2 border-lemon">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="font-fredoka text-2xl text-lemon">
+                Manage Parent Roles for {selectedChild.name}
+              </h2>
+              <button
+                onClick={() => setShowRoleManagement(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="space-y-4">
+              {parentRoles.length === 0 ? (
+                <p className="font-nunito text-gray-600">Loading parent roles...</p>
+              ) : (
+                parentRoles.map((parentRole: any) => {
+                  const parentData = parentRole.users || {};
+                  const parentName = parentData.parent_profiles?.[0]?.name || 
+                                   parentData.email?.split('@')[0] || 
+                                   'Unknown Parent';
+                  
+                  return (
+                    <div key={parentRole.id} className="border rounded-lg p-4">
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <p className="font-fredoka text-lg">{parentName}</p>
+                          <p className="font-nunito text-sm text-gray-600">
+                            Role: {parentRole.role === 'primary_parent' ? 'Primary Parent' :
+                                   parentRole.role === 'co_parent' ? 'Co-Parent' : 'Guardian'}
+                          </p>
+                          {parentRole.permissions && (
+                            <div className="mt-2 flex flex-wrap gap-2">
+                              {(parentRole.permissions as any)?.can_manage_access && (
+                                <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">
+                                  Manage Access
+                                </span>
+                              )}
+                              {(parentRole.permissions as any)?.can_create_stories && (
+                                <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
+                                  Create Stories
+                                </span>
+                              )}
+                              {(parentRole.permissions as any)?.can_view_progress && (
+                                <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded">
+                                  View Progress
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                        {parentRole.role !== 'primary_parent' && (
+                          <select
+                            value={parentRole.role}
+                            onChange={async (e) => {
+                              const response = await fetch('/api/parents/roles', {
+                                method: 'PATCH',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                  linkId: parentRole.id,
+                                  role: e.target.value,
+                                }),
+                              });
+                              if (response.ok) {
+                                window.location.reload();
+                              } else {
+                                const data = await response.json();
+                                alert(data.error || 'Failed to update role');
+                              }
+                            }}
+                            className="input-field text-sm"
+                          >
+                            <option value="co_parent">Co-Parent</option>
+                            <option value="guardian">Guardian</option>
+                          </select>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
           </section>
         )}
 
