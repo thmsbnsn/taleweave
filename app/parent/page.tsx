@@ -107,6 +107,58 @@ export default function ParentDashboard() {
       }
     }
     load();
+  }, [supabase]);
+
+  // Load child profile and parent roles when child is selected
+  useEffect(() => {
+    async function loadChildDetails() {
+      if (!selectedChild) {
+        setChildProfile(null);
+        setChildPreferences(null);
+        setParentRoles([]);
+        setUserRole(null);
+        return;
+      }
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Get user's role for this child
+      const { data: userLink } = await supabase
+        .from('parent_children')
+        .select('role, permissions')
+        .eq('parent_id', user.id)
+        .eq('child_id', selectedChild.id)
+        .eq('status', 'active')
+        .single();
+
+      setUserRole(userLink?.role || null);
+
+      // Load child profile
+      try {
+        const profileResponse = await fetch(`/api/children/${selectedChild.id}/profile`);
+        if (profileResponse.ok) {
+          const profileData = await profileResponse.json();
+          setChildProfile(profileData.profile);
+          setChildPreferences(profileData.preferences);
+        }
+      } catch (error) {
+        console.error('Error loading child profile:', error);
+      }
+
+      // Load all parent roles
+      try {
+        const rolesResponse = await fetch(`/api/parents/roles?childId=${selectedChild.id}`);
+        if (rolesResponse.ok) {
+          const rolesData = await rolesResponse.json();
+          setParentRoles(rolesData.parents || []);
+        }
+      } catch (error) {
+        console.error('Error loading parent roles:', error);
+      }
+    }
+
+    loadChildDetails();
   }, [supabase, selectedChild]);
 
   // Toggle lock
