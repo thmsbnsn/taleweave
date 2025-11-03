@@ -91,6 +91,15 @@ function LoginForm() {
             Sign up
           </Link>
         </p>
+
+        <div className="mt-4 pt-4 border-t border-gray-200">
+          <p className="text-center font-nunito text-gray-600 text-sm mb-2">
+            Are you a kid? Login with your username instead!
+          </p>
+          <Link href="/children/login" className="block text-center text-coral font-bold hover:underline">
+            Kids Login
+          </Link>
+        </div>
       </div>
     </main>
   )
