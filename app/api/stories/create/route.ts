@@ -43,10 +43,31 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if user has access (subscription or credits)
-    const access = await checkUserAccess(user.id)
+    // Log for debugging
+    console.log('Checking access for user:', user.id, 'email:', user.email)
+    
+    let access
+    try {
+      access = await checkUserAccess(user.id)
+      console.log('Access check result:', access)
+    } catch (error: any) {
+      console.error('Error in checkUserAccess:', error)
+      // If regular check fails, try service role fallback
+      if (error.message?.includes('schema') || error.code === 'PGRST106') {
+        const { checkUserAccessWithServiceRole } = await import('@/lib/payments-service')
+        access = await checkUserAccessWithServiceRole(user.id, user.email || '')
+        console.log('Fallback access check result:', access)
+      } else {
+        return NextResponse.json(
+          { error: 'Unable to verify access. Please try again or contact support.' },
+          { status: 500 }
+        )
+      }
+    }
+    
     if (!access.hasAccess) {
       return NextResponse.json(
-        { error: access.reason || 'No access' },
+        { error: access.reason || 'No access available. Please purchase a story or subscribe.' },
         { status: 403 }
       )
     }

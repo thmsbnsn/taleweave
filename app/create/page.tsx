@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 
 export const dynamic = 'force-dynamic'
@@ -10,6 +11,7 @@ export default function CreateStoryPage() {
   const router = useRouter()
   const supabase = createClient()
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     childName: '',
     age: '',
@@ -19,6 +21,7 @@ export default function CreateStoryPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
+    setError(null)
 
     try {
       // Check if user is authenticated
@@ -39,19 +42,19 @@ export default function CreateStoryPage() {
       const data = await response.json()
       
       if (!response.ok) {
-        alert(data.error || 'Failed to create story. Please check if you have credits or an active subscription.')
+        setError(data.error || 'Failed to create story. Please check if you have credits or an active subscription.')
         return
       }
 
       if (!data.storyId) {
-        alert('Story creation started but no ID returned. Please check your stories later.')
+        setError('Story creation started but no ID returned. Please check your stories later.')
         return
       }
 
       router.push(`/stories/${data.storyId}`)
     } catch (error) {
       console.error('Error creating story:', error)
-      alert('Failed to create story. Please try again.')
+      setError('Failed to create story. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -64,6 +67,45 @@ export default function CreateStoryPage() {
           Create Your Story
         </h1>
         
+        {error && (
+          <div className="card bg-red-50 border-2 border-red-200 mb-6">
+            <div className="flex items-start gap-3">
+              <div className="text-2xl">⚠️</div>
+              <div className="flex-1">
+                <h3 className="font-fredoka text-xl text-red-800 mb-2">
+                  Unable to Create Story
+                </h3>
+                <p className="font-nunito text-red-700 mb-4">
+                  {error}
+                </p>
+                {error.includes('subscription') || error.includes('credits') ? (
+                  <div className="flex gap-3">
+                    <Link 
+                      href="/pricing" 
+                      className="btn-primary text-sm px-4 py-2"
+                    >
+                      View Pricing
+                    </Link>
+                    <button
+                      onClick={() => setError(null)}
+                      className="btn-secondary text-sm px-4 py-2"
+                    >
+                      Dismiss
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setError(null)}
+                    className="btn-secondary text-sm px-4 py-2"
+                  >
+                    Dismiss
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="card space-y-6">
           <div>
             <label htmlFor="childName" className="block font-fredoka text-xl text-gray-800 mb-2">
@@ -123,4 +165,3 @@ export default function CreateStoryPage() {
     </main>
   )
 }
-
