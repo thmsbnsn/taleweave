@@ -97,10 +97,10 @@ export default function LearnPage() {
               No Characters Yet!
             </h1>
             <p className="font-nunito text-xl text-gray-600 mb-8">
-              Create your first story to unlock TaleWeave Academy. Your character will be your learning companion!
+              Create your first character to unlock TaleWeave Academy. Your character will be your learning companion!
             </p>
-            <Link href="/create" className="btn-primary text-xl px-8 py-4 inline-block">
-              Create Your First Story
+            <Link href="/characters/create" className="btn-primary text-xl px-8 py-4 inline-block">
+              Create Your First Character
             </Link>
           </div>
         </div>
