@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
@@ -22,6 +22,25 @@ export default function Home() {
   const [subscriptionActive, setSubscriptionActive] = useState(false)
   const [stories, setStories] = useState<Story[]>([])
   const [loading, setLoading] = useState(true)
+
+  const fetchUserStories = useCallback(async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('stories')
+        .select('id, child_name, created_at, status, audio_url')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(10)
+
+      if (!error && data) {
+        setStories(data as Story[])
+      }
+    } catch (error) {
+      console.error('Error fetching stories:', error)
+    } finally {
+      setLoading(false)
+    }
+  }, [supabase])
 
   useEffect(() => {
     async function checkAuth() {
@@ -55,26 +74,7 @@ export default function Home() {
     }
 
     checkAuth()
-  }, [supabase])
-
-  async function fetchUserStories(userId: string) {
-    try {
-      const { data, error } = await supabase
-        .from('stories')
-        .select('id, child_name, created_at, status, audio_url')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false })
-        .limit(10)
-
-      if (!error && data) {
-        setStories(data as Story[])
-      }
-    } catch (error) {
-      console.error('Error fetching stories:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
+  }, [supabase, fetchUserStories])
 
   async function handleLogout() {
     await supabase.auth.signOut()

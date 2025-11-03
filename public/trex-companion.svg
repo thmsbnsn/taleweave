@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="220" height="220" viewBox="0 0 220 220" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <title>Friendly T-Rex</title>
+  <circle cx="110" cy="110" r="90" fill="#4ECDC4" opacity="0.15"/>
+
+  <!-- Body -->
+  <ellipse cx="110" cy="140" rx="60" ry="65" fill="#95E1D3" stroke="#4ECDC4" stroke-width="3"/>
+
+  <!-- Belly -->
+  <ellipse cx="110" cy="145" rx="45" ry="50" fill="#FFFFFF" opacity="0.8"/>
+
+  <!-- Head -->
+  <ellipse cx="110" cy="70" rx="45" ry="40" fill="#95E1D3" stroke="#4ECDC4" stroke-width="3"/>
+
+  <!-- Snout -->
+  <path d="M140 75 Q155 70, 160 80 Q155 90, 140 85 Z" fill="#4ECDC4"/>
+
+  <!-- Eyes -->
+  <g className="eyes">
+    <circle cx="100" cy="65" r="12" fill="#FFFFFF" stroke="#2A9D8F" stroke-width="2"/>
+    <circle cx="100" cy="65" r="6" fill="#2A9D8F"/>
+    <circle cx="120" cy="65" r="12" fill="#FFFFFF" stroke="#2A9D8F" stroke-width="2"/>
+    <circle cx="120" cy="65" r="6" fill="#2A9D8F"/>
+  </g>
+
+  <!-- Tiny Arms (waving) -->
+  <g className="arms">
+    <ellipse cx="80" cy="130" rx="15" ry="10" fill="#95E1D3" className="arm-left"/>
+    <ellipse cx="140" cy="130" rx="15" ry="10" fill="#95E1D3" className="arm-right"/>
+  </g>
+
+  <!-- Tail -->
+  <path d="M50 140 Q30 150, 25 165 Q35 170, 50 160 Z" fill="#95E1D3" stroke="#4ECDC4" stroke-width="3"/>
+
+  <!-- Heart -->
+  <path d="M110 105 Q105 100, 100 105 Q95 110, 100 115 Q105 120, 110 118 Z"
+        fill="#FF6B6B" className="heart"/>
+
+  <style>
+    {`.eyes, .arms, .heart { animation: float 3s ease-in-out infinite; }
+     .arm-left { transform-origin: 80px 130px; animation: wave 1.5s ease-in-out infinite; }
+     .arm-right { transform-origin: 140px 130px; animation: wave 1.5s ease-in-out infinite reverse; }
+     @keyframes wave { 0%,100% { transform: rotate(0deg); } 50% { transform: rotate(30deg); } }`}
+  </style>
+</svg>

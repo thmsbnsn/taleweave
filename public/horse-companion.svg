@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="220" height="220" viewBox="0 0 220 220" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <title>Noble Steed</title>
+  <circle cx="110" cy="110" r="95" fill="#95E1D3" opacity="0.15"/>
+
+  <!-- Body -->
+  <ellipse cx="110" cy="135" rx="65" ry="55" fill="#8B5A2B" stroke="#6B4423" stroke-width="3"/>
+
+  <!-- Neck -->
+  <path d="M110 100 Q100 80, 95 70 Q100 60, 110 65 Q120 60, 125 70 Q120 80, 110 100"
+        fill="#8B5A2B" stroke="#6B4423" stroke-width="3"/>
+
+  <!-- Head -->
+  <ellipse cx="110" cy="65" rx="35" ry="40" fill="#8B5A2B" stroke="#6B4423" stroke-width="3"/>
+
+  <!-- Mane (flowing) -->
+  <path d="M100 50 Q95 40, 100 35 Q105 40, 110 45" fill="#FFE66D"/>
+  <path d="M105 48 Q100 38, 105 33 Q110 38, 115 43" fill="#FF6B6B"/>
+  <path d="M110 46 Q105 36, 110 31 Q115 36, 120 41" fill="#4ECDC4"/>
+
+  <!-- Eyes -->
+  <circle cx="100" cy="60" r="8" fill="#FFFFFF" stroke="#2A9D8F" stroke-width="2"/>
+  <circle cx="100" cy="60" r="4" fill="#2A9D8F"/>
+
+  <!-- Nostrils -->
+  <ellipse cx="125" cy="75" rx="8" ry="5" fill="#6B4423"/>
+
+  <!-- Legs -->
+  <rect x="80" y="160" width="15" height="40" rx="7" fill="#6B4423"/>
+  <rect x="125" y="160" width="15" height="40" rx="7" fill="#6B4423"/>
+
+  <!-- Hooves -->
+  <ellipse cx="87.5" cy="200" rx="10" ry="6" fill="#2A9D8F"/>
+  <ellipse cx="132.5" cy="200" rx="10" ry="6" fill="#2A9D8F"/>
+
+  <!-- Heart -->
+  <path d="M110 110 Q105 105, 100 110 Q95 115, 100 120 Q105 125, 110 123 Z"
+        fill="#FF6B6B" className="heart"/>
+
+  <style>
+    {`.heart, .mane path { animation: float 3s ease-in-out infinite; }
+     .mane path { animation: wave 2s ease-in-out infinite; }
+     @keyframes wave { 0%,100% { transform: translateX(0); } 50% { transform: translateX(3px); } }`}
+  </style>
+</svg>

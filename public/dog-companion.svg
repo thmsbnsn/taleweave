@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="200" height="220" viewBox="0 0 200 220" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <title>Good Doggie</title>
+  <circle cx="100" cy="110" r="90" fill="#FFE66D" opacity="0.15"/>
+
+  <!-- Body -->
+  <ellipse cx="100" cy="135" rx="55" ry="60" fill="#F4A261" stroke="#E76F51" stroke-width="3"/>
+
+  <!-- Belly -->
+  <ellipse cx="100" cy="140" rx="40" ry="45" fill="#FFFFFF" opacity="0.8"/>
+
+  <!-- Head -->
+  <circle cx="100" cy="80" r="40" fill="#F4A261" stroke="#E76F51" stroke-width="3"/>
+
+  <!-- Snout -->
+  <ellipse cx="100" cy="90" rx="25" ry="20" fill="#FFFFFF"/>
+  <circle cx="95" cy="88" r="3" fill="#2A9D8F"/>
+  <circle cx="105" cy="88" r="3" fill="#2A9D8F"/>
+
+  <!-- Ears -->
+  <path d="M70 65 Q60 50, 65 45" fill="#E76F51" stroke="#2A9D8F" stroke-width="2"/>
+  <path d="M130 65 Q140 50, 135 45" fill="#E76F51" stroke="#2A9D8F" stroke-width="2"/>
+
+  <!-- Eyes -->
+  <g className="eyes">
+    <circle cx="88" cy="75" r="10" fill="#FFFFFF" stroke="#2A9D8F" stroke-width="2"/>
+    <circle cx="88" cy="75" r="5" fill="#2A9D8F"/>
+    <circle cx="112" cy="75" r="10" fill="#FFFFFF" stroke="#2A9D8F" stroke-width="2"/>
+    <circle cx="112" cy="75" r="5" fill="#2A9D8F"/>
+  </g>
+
+  <!-- Tongue (happy!) -->
+  <path d="M95 95 Q100 100, 105 95" fill="#FF6B6B" className="tongue"/>
+
+  <!-- Tail (wagging) -->
+  <path d="M150 130 Q165 140, 170 155 Q165 160, 155 155 Q150 145, 150 130"
+        fill="#F4A261" stroke="#E76F51" stroke-width="3" className="tail-wag"/>
+
+  <!-- Paws -->
+  <ellipse cx="80" cy="165" rx="15" ry="10" fill="#E76F51"/>
+  <ellipse cx="120" cy="165" rx="15" ry="10" fill="#E76F51"/>
+
+  <!-- Heart -->
+  <path d="M100 110 Q95 105, 90 110 Q85 115, 90 120 Q95 125, 100 123 Q105 125, 110 120 Q115 115, 110 110 Z"
+        fill="#FF6B6B" className="heart"/>
+
+  <style>
+    {`.eyes, .tongue, .tail-wag, .heart { animation: float 3s ease-in-out infinite; }
+     .tail-wag { transform-origin: 150px 130px; animation: wag 1s ease-in-out infinite; }
+     @keyframes wag { 0%,100% { transform: rotate(0deg); } 50% { transform: rotate(30deg); } }
+     @keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }`}
+  </style>
+</svg>

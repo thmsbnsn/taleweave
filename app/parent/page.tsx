@@ -33,12 +33,24 @@ export default function ParentDashboard() {
         .single();
       setParent(p || { user_id: user.id });
 
-      // Children linked via a simple join table or users table
-      const { data: kids } = await supabase
+      // Children linked via parent_id in users table
+      // Note: If child_name column doesn't exist, we'll use email or id
+      const { data: kidsData, error: kidsError } = await supabase
         .from('users')
-        .select('id, child_name as name, avatar_url')
+        .select('id, email, avatar_url')
         .eq('parent_id', user.id);
-      setChildren(kids || []);
+      
+      if (kidsError) {
+        console.error('Error loading children:', kidsError);
+      }
+      
+      // Map to Child type
+      const kids: Child[] = (kidsData || []).map((kid: any) => ({
+        id: kid.id,
+        name: kid.email?.split('@')[0] || `Child ${kid.id.slice(0, 8)}`,
+        avatar_url: kid.avatar_url,
+      }));
+      setChildren(kids);
 
       // Lock status (stored on child user row)
       if (kids?.[0]) {
